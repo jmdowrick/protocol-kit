@@ -3,6 +3,7 @@
  * renumbers the observations that refer to experiments and sub-experiments by their place, so none points at the
  * wrong one after a change.
  */
+import { findPlotsLosingInput, followSubExperimentRemoval, listPredictionPlots } from './predictionPlots.js'
 import { buildShapeFromForm, nameExperiment, readShapeForm } from './protocolModel.js'
 import { interpolateTrace } from './protocolPreview.js'
 import { PACING, expandShape, isMapping, normaliseShape } from './protocolShapes.js'
@@ -90,13 +91,17 @@ const findSubExperiment = (key, item) => item.subexperiment_idx ?? (key === 'dat
  * @param {number} experiment
  * @param {number} [sub] - Leave out for the whole experiment. A data item without a subexperiment_idx is in the
  *   first sub-experiment; a prediction item without one follows the experiment's last, so is in none.
- * @returns {string[]} Their names.
+ * @returns {string[]} Their names, then those of the feature plots removing a sub-experiment removes (see
+ *   findPlotsLosingInput), as `<name> (feature plot)`.
  */
 export function findObservationsAt(document, experiment, sub = null) {
   const items = Array.isArray(document) ? document.map((item) => ['data_items', item]) : ['data_items', 'prediction_items'].flatMap((key) => (document?.[key] ?? []).map((item) => [key, item]))
-  return items
+  const names = items
     .filter(([key, item]) => (item.experiment_idx ?? 0) === experiment && (sub == null || findSubExperiment(key, item) === sub))
     .map(([, item]) => item.data_item_name ?? '(unnamed)')
+  if (sub == null || Array.isArray(document)) return names
+  const plots = listPredictionPlots(document)
+  return [...names, ...findPlotsLosingInput(document, experiment, sub).map((index) => `${plots[index].name ?? '(unnamed)'} (feature plot)`)]
 }
 
 /**
@@ -282,7 +287,8 @@ export function findEndValue(info, leaf, end) {
 }
 
 /**
- * Removes a sub-experiment, and the observations of it; the experiment keeps at least one.
+ * Removes a sub-experiment, and the observations of it; the experiment keeps at least one. Feature plots keep reading
+ * the same inputs, or go when they can't (see followSubExperimentRemoval).
  *
  * @param {Object} document
  * @param {number} experiment
@@ -295,6 +301,7 @@ export function removeSubExperiment(document, experiment, sub) {
     if (info.sim_times[experiment].length < 2) return
     info.sim_times[experiment].splice(sub, 1)
     for (const rows of Object.values(info.params_to_change)) rows[experiment].splice(sub, 1)
+    followSubExperimentRemoval(edited, experiment, sub)
     for (const key of ['data_items', 'prediction_items']) {
       if (!Array.isArray(edited[key])) continue
       edited[key] = edited[key].flatMap((item) => {
