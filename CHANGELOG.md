@@ -1,6 +1,20 @@
 # Changelog
 
-## 0.2.0 (unreleased)
+## Unreleased
+
+- `readPredictionItem` checks a prediction item's held-out `std` as circulatory_autogen #536's head (7e9fdb55) does
+  (`_held_out_std`): finite and above 0, one number for a constant, one or one per point for a series, which it
+  expands. The prediction vectors now come from that commit, which PhLynx's exported scripts install.
+- Outputs are grouped as CA names them for plotting (`nameItemForPlotting`): `item_name_for_plotting`, else
+  `trace_name_for_plotting`, else the first operand, else `data_item_name`, legacy keys migrated. Before, an item
+  without `item_name_for_plotting` was an output of its own.
+- `listOutputs` marks an output with two items in one experiment (`hasRepeatedExperiment`); `updateOutput` leaves it
+  as it is, as writing one item per experiment dropped the rest, and the editor won't edit it.
+- The editor: clicking the Variable caption no longer clears the variable; an error all of an output's items have
+  shows once; parameters are always offered, for their mean; a range field that reads as no number is refused.
+  `NumberInput` emits `invalid`.
+
+## 0.2.0 (2026-10-09)
 
 - Outputs: `prediction_items` as a run's outputs, each a variable's trace or a feature of it (`max`, `min`, `mean`,
   `max_minus_min`, and their `*_in_range` forms over `start_frac` to `end_frac`), in the experiments and
@@ -17,8 +31,10 @@
   sub-experiment need circulatory_autogen #536: released libcuflynx 0.7.3 and current CUFLynx reject them.
 - The editor: an Outputs section (`ProtocolOutputsEditor`) below the protocol, to add, edit and remove outputs, with
   the host's variables (parameters only for a mean). `ProtocolEditor` takes `dt`.
+- Publishing builds and tests the package first, and authenticates with an npm token. 0.1.1, which set this up, was
+  never published.
 
-## 0.1.0 (unreleased)
+## 0.1.0 (2026-10-09)
 
 - The protocol core, extracted from PhLynx (`src/services/protocol/`): reading and writing obs_data, validation as
   circulatory_autogen does it, shape expansion, editing and preview.
