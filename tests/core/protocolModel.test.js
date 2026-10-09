@@ -3,7 +3,7 @@ import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-import { readProtocolInfo, readShapeForm } from '../../src/core/protocolModel.js'
+import { findParametersAtModelValues, readProtocolInfo, readShapeForm } from '../../src/core/protocolModel.js'
 import { normaliseShape } from '../../src/core/protocolShapes.js'
 import { validateProtocolInfo } from '../../src/core/protocolValidation.js'
 
@@ -80,5 +80,40 @@ describe('readShapeForm', () => {
     expect(form({ events: [{ level: 2, start: 3, length: 2 }] }, 10)).toEqual({ type: 'pulse', baseline: 0, level: 2, start: 3, end: 5 })
     expect(form({ type: 'ramp', from: 1, to: 2 }, 10)).toEqual({ type: 'ramp', from: 1, to: 2 })
     expect(form({ events: [{ level: 1, length: 1 }, { level: 2, start: 5, length: 1 }] }, 10)).toBeNull()
+  })
+})
+
+describe('findParametersAtModelValues', () => {
+  // Two experiments, the second of two sub-experiments.
+  const view = (params, extra = {}) =>
+    readProtocolInfo({ pre_times: [0, 0], sim_times: [[1], [1, 1]], params_to_change: params, protocol_shapes: {}, protocol_traces: {}, ...extra })
+  const model = { 'a/g': 0.12, 'a/zero': 0, 'a/text': '-80', 'a/unknown': null, 'a/nan': NaN, 'a/empty': '' }
+  const find = (params, extra) => findParametersAtModelValues(view(params, extra), (parameter) => model[parameter])
+
+  it('finds those set to the model value everywhere, within rounding, in the view order', () => {
+    expect(find({ 'a/text': [[-80], [-80, -80.00000000001]], 'a/g': [[0.12], [0.12, 0.1 + 0.02]], 'a/zero': [[0], [0, 0]] })).toEqual([
+      'a/text',
+      'a/g',
+      'a/zero',
+    ])
+  })
+
+  it('keeps those set to another number anywhere, however small the difference beyond rounding', () => {
+    expect(find({ 'a/g': [[0.12], [0.12, 0.1200001]], 'a/zero': [[0], [1e-20, 0]] })).toEqual([])
+  })
+
+  it('keeps those set to a shape or a trace anywhere, even one holding the model value', () => {
+    const extra = { protocol_shapes: { flat: { type: 'ramp', from: 0.12, to: 0.12 } }, protocol_traces: { held: { t: [0, 1], values: [0.12, 0.12] } } }
+    expect(find({ 'a/g': [[0.12], [0.12, 'flat']] }, extra)).toEqual([])
+    expect(find({ 'a/g': [['held'], [0.12, 0.12]] }, extra)).toEqual([])
+  })
+
+  it('keeps those whose model value is unknown, or not a number', () => {
+    expect(find({ 'a/unknown': [[0], [0, 0]], 'a/nan': [[0], [0, 0]], 'a/empty': [[0], [0, 0]], 'a/missing': [[0], [0, 0]] })).toEqual([])
+  })
+
+  it('keeps those with a value that is not a finite number', () => {
+    expect(find({ 'a/g': [[0.12], [0.12, null]] })).toEqual([])
+    expect(find({ 'a/g': [[0.12], [0.12, Infinity]] })).toEqual([])
   })
 })

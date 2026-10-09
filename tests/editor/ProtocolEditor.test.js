@@ -214,6 +214,88 @@ describe('ProtocolEditor', () => {
   })
 })
 
+describe('ProtocolEditor, parameters at their model values', () => {
+  // Two sub-experiments: V_clamp steps, the others stay at the model's values (g_K's read from a string).
+  const atModelValues = () => ({
+    protocol_info: {
+      pre_times: [0],
+      sim_times: [[1, 1]],
+      params_to_change: {
+        'parameters/g_Na': [[0.12, 0.12]],
+        'membrane/V_clamp': [[-80, -40]],
+        'parameters/g_K': [[0.036, 0.036]],
+        'global_parameters/T': [[0, 0]],
+      },
+    },
+  })
+  const laneNames = () => wrapper.findAll('.lane-label').map((label) => label.attributes('title'))
+  const toggle = () => wrapper.find('.collapsed-toggle')
+
+  it('tucks them away below the others, and shows and hides them on asking', async () => {
+    mountEditor(atModelValues())
+    expect(laneNames()).toEqual(['membrane/V_clamp'])
+    expect(wrapper.find('.collapsed-note span').text()).toBe('3 parameters at their model values')
+    expect(toggle().attributes('aria-expanded')).toBe('false')
+    expect(toggle().attributes('aria-label')).toBe('Show 3 parameters at their model values')
+
+    await toggle().trigger('click')
+    expect(laneNames()).toEqual(['parameters/g_Na', 'membrane/V_clamp', 'parameters/g_K', 'global_parameters/T'])
+    expect(toggle().attributes('aria-expanded')).toBe('true')
+    expect(toggle().text()).toBe('Hide')
+
+    await toggle().trigger('click')
+    expect(laneNames()).toEqual(['membrane/V_clamp'])
+    // The document keeps them.
+    expect(wrapper.emitted('update:document')).toBeUndefined()
+  })
+
+  it('shows one again once it is set to something else', async () => {
+    mountEditor(atModelValues())
+    await toggle().trigger('click')
+    const edited = atModelValues()
+    edited.protocol_info.params_to_change['parameters/g_Na'][0][1] = 0.2
+    await wrapper.setProps({ document: edited })
+    await toggle().trigger('click')
+    expect(laneNames()).toEqual(['parameters/g_Na', 'membrane/V_clamp'])
+    expect(wrapper.find('.collapsed-note span').text()).toBe('2 parameters at their model values')
+  })
+
+  it('shows a parameter added in the editor, though at its model value', async () => {
+    const document = atModelValues()
+    delete document.protocol_info.params_to_change['parameters/g_Na']
+    mountEditor(document)
+    await wrapper.find('.add-parameter-button').trigger('click')
+    wrapper.findComponent(VariablePicker).vm.$emit('pick', VARIABLES[3])
+    await flushPromises()
+    const [edited] = emittedDocuments()
+    expect(edited.protocol_info.params_to_change['parameters/g_Na']).toEqual([[0.12, 0.12]])
+    await wrapper.setProps({ document: edited })
+    expect(laneNames()).toEqual(['membrane/V_clamp', 'parameters/g_Na'])
+    expect(wrapper.find('.collapsed-note span').text()).toBe('2 parameters at their model values')
+  })
+
+  it('shows those an error or warning names', () => {
+    const document = atModelValues()
+    // CA refuses the row as too short; the editor reads the missing value as 0, T's model value.
+    document.protocol_info.params_to_change['global_parameters/T'] = [[0]]
+    mountEditor(document, { warn: () => ['parameters/g_K is ignored here.'] })
+    expect(wrapper.find('.messages').text()).toContain('global_parameters/T[0]: 1 sub value(s), expected 2')
+    expect(laneNames()).toEqual(['membrane/V_clamp', 'parameters/g_K', 'global_parameters/T'])
+    expect(wrapper.find('.collapsed-note span').text()).toBe('1 parameter at its model value')
+  })
+
+  it('shows those whose model value is unknown', () => {
+    const getValue = (name) => (name === 'parameters/g_Na' ? undefined : name === 'global_parameters/T' ? 'n/a' : VARIABLES.find((variable) => variable.name === name)?.value)
+    mountEditor(atModelValues(), { getValue })
+    expect(laneNames()).toEqual(['parameters/g_Na', 'membrane/V_clamp', 'global_parameters/T'])
+  })
+
+  it('offers no line when none is at its model value', () => {
+    mountEditor(readFixture('br-1977_obs_data.json'))
+    expect(wrapper.find('.collapsed-note').exists()).toBe(false)
+  })
+})
+
 describe('VariablePicker', () => {
   it('searches the variables given, keeping those the filter keeps, and emits the one picked', async () => {
     wrapper = mount(VariablePicker, {
