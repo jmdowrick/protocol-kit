@@ -47,4 +47,9 @@ jobs:
           fi
       # Trusted publishing needs npm 11.5.1 or later (Node 24 ships with it).
       - run: npm --version
+      # npm trusted publishing (OIDC) rejects this repo's GitHub token: repos created after 2026-07-15 get immutable
+      # subject claims, which npm doesn't match yet (npm/cli#9969). Until it does, publish with a granular npm token,
+      # limited to this package, stored as the NPM_TOKEN secret; provenance still comes from the OIDC token.
       - run: npm publish --provenance --ignore-scripts --tag ${{ steps.determine_tag.outputs.tag }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
