@@ -1,0 +1,2126 @@
+{
+ "source": {
+  "repository": "circulatory_autogen",
+  "commit": "96ec5c63"
+ },
+ "protocol_info": {
+  "pre_times": [
+   0,
+   0,
+   0
+  ],
+  "sim_times": [
+   [
+    1,
+    2
+   ],
+   [
+    3
+   ],
+   [
+    1,
+    1,
+    1
+   ]
+  ],
+  "params_to_change": {}
+ },
+ "data_items": [
+  {
+   "data_item_name": "V_rest",
+   "data_type": "constant",
+   "unit": "mV",
+   "operands": [
+    "membrane/V"
+   ],
+   "operation": "mean",
+   "value": -80,
+   "std": 1
+  }
+ ],
+ "cases": [
+  {
+   "name": "a trace",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV"
+    }
+   ],
+   "result": {
+    "operands": [
+     [
+      "membrane/V"
+     ]
+    ],
+    "units": [
+     "mV"
+    ],
+    "data_item_names": [
+     "out"
+    ],
+    "trace_names_for_plotting": [
+     "membrane/V"
+    ],
+    "item_names_for_plotting": [
+     "membrane/V"
+    ],
+    "experiment_idxs": [
+     0
+    ],
+    "subexperiment_idxs": [
+     1
+    ],
+    "data_types": [
+     null
+    ],
+    "values": [
+     null
+    ],
+    "stds": [
+     null
+    ],
+    "obs_dts": [
+     null
+    ],
+    "operations": [
+     null
+    ],
+    "operation_kwargs": [
+     {}
+    ]
+   }
+  },
+  {
+   "name": "a trace of a sub-experiment",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "experiment_idx": 2,
+     "subexperiment_idx": 1
+    }
+   ],
+   "result": {
+    "operands": [
+     [
+      "membrane/V"
+     ]
+    ],
+    "units": [
+     "mV"
+    ],
+    "data_item_names": [
+     "out"
+    ],
+    "trace_names_for_plotting": [
+     "membrane/V"
+    ],
+    "item_names_for_plotting": [
+     "membrane/V"
+    ],
+    "experiment_idxs": [
+     2
+    ],
+    "subexperiment_idxs": [
+     1
+    ],
+    "data_types": [
+     null
+    ],
+    "values": [
+     null
+    ],
+    "stds": [
+     null
+    ],
+    "obs_dts": [
+     null
+    ],
+    "operations": [
+     null
+    ],
+    "operation_kwargs": [
+     {}
+    ]
+   }
+  },
+  {
+   "name": "features in a range, across experiments",
+   "prediction_items": [
+    {
+     "data_item_name": "I_peak_e0",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "operation": "min_in_range",
+     "operation_kwargs": {
+      "start_frac": 0,
+      "end_frac": 0.2
+     },
+     "item_name_for_plotting": "I_peak",
+     "subexperiment_idx": 1
+    },
+    {
+     "data_item_name": "I_peak_e1",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "operation": "min_in_range",
+     "operation_kwargs": {
+      "start_frac": 0,
+      "end_frac": 0.2
+     },
+     "item_name_for_plotting": "I_peak",
+     "experiment_idx": 1
+    }
+   ],
+   "result": {
+    "operands": [
+     [
+      "membrane/V"
+     ],
+     [
+      "membrane/V"
+     ]
+    ],
+    "units": [
+     "mV",
+     "mV"
+    ],
+    "data_item_names": [
+     "I_peak_e0",
+     "I_peak_e1"
+    ],
+    "trace_names_for_plotting": [
+     "membrane/V",
+     "membrane/V"
+    ],
+    "item_names_for_plotting": [
+     "I_peak",
+     "I_peak"
+    ],
+    "experiment_idxs": [
+     0,
+     1
+    ],
+    "subexperiment_idxs": [
+     1,
+     0
+    ],
+    "data_types": [
+     null,
+     null
+    ],
+    "values": [
+     null,
+     null
+    ],
+    "stds": [
+     null,
+     null
+    ],
+    "obs_dts": [
+     null,
+     null
+    ],
+    "operations": [
+     "min_in_range",
+     "min_in_range"
+    ],
+    "operation_kwargs": [
+     {
+      "start_frac": 0,
+      "end_frac": 0.2
+     },
+     {
+      "start_frac": 0,
+      "end_frac": 0.2
+     }
+    ]
+   }
+  },
+  {
+   "name": "labels given",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "trace_name_for_plotting": "Voltage",
+     "item_name_for_plotting": "V"
+    }
+   ],
+   "result": {
+    "operands": [
+     [
+      "membrane/V"
+     ]
+    ],
+    "units": [
+     "mV"
+    ],
+    "data_item_names": [
+     "out"
+    ],
+    "trace_names_for_plotting": [
+     "Voltage"
+    ],
+    "item_names_for_plotting": [
+     "V"
+    ],
+    "experiment_idxs": [
+     0
+    ],
+    "subexperiment_idxs": [
+     1
+    ],
+    "data_types": [
+     null
+    ],
+    "values": [
+     null
+    ],
+    "stds": [
+     null
+    ],
+    "obs_dts": [
+     null
+    ],
+    "operations": [
+     null
+    ],
+    "operation_kwargs": [
+     {}
+    ]
+   }
+  },
+  {
+   "name": "operation spelled as none",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "operation": "None"
+    },
+    {
+     "data_item_name": "b",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "operation": ""
+    },
+    {
+     "data_item_name": "c",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "operation": " null "
+    }
+   ],
+   "result": {
+    "operands": [
+     [
+      "membrane/V"
+     ],
+     [
+      "membrane/V"
+     ],
+     [
+      "membrane/V"
+     ]
+    ],
+    "units": [
+     "mV",
+     "mV",
+     "mV"
+    ],
+    "data_item_names": [
+     "out",
+     "b",
+     "c"
+    ],
+    "trace_names_for_plotting": [
+     "membrane/V",
+     "membrane/V",
+     "membrane/V"
+    ],
+    "item_names_for_plotting": [
+     "membrane/V",
+     "membrane/V",
+     "membrane/V"
+    ],
+    "experiment_idxs": [
+     0,
+     0,
+     0
+    ],
+    "subexperiment_idxs": [
+     1,
+     1,
+     1
+    ],
+    "data_types": [
+     null,
+     null,
+     null
+    ],
+    "values": [
+     null,
+     null,
+     null
+    ],
+    "stds": [
+     null,
+     null,
+     null
+    ],
+    "obs_dts": [
+     null,
+     null,
+     null
+    ],
+    "operations": [
+     null,
+     null,
+     null
+    ],
+    "operation_kwargs": [
+     {},
+     {},
+     {}
+    ]
+   }
+  },
+  {
+   "name": "validation data",
+   "prediction_items": [
+    {
+     "data_item_name": "V_peak",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "operation": "max",
+     "data_type": "constant",
+     "value": 20.5,
+     "std": 1.5
+    }
+   ],
+   "result": {
+    "operands": [
+     [
+      "membrane/V"
+     ]
+    ],
+    "units": [
+     "mV"
+    ],
+    "data_item_names": [
+     "V_peak"
+    ],
+    "trace_names_for_plotting": [
+     "membrane/V"
+    ],
+    "item_names_for_plotting": [
+     "membrane/V"
+    ],
+    "experiment_idxs": [
+     0
+    ],
+    "subexperiment_idxs": [
+     1
+    ],
+    "data_types": [
+     "constant"
+    ],
+    "values": [
+     20.5
+    ],
+    "stds": [
+     1.5
+    ],
+    "obs_dts": [
+     null
+    ],
+    "operations": [
+     "max"
+    ],
+    "operation_kwargs": [
+     {}
+    ]
+   }
+  },
+  {
+   "name": "a series",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "data_type": "series",
+     "value": [
+      1,
+      2,
+      3
+     ],
+     "std": [
+      0.5,
+      0.5,
+      0.5
+     ],
+     "obs_dt": 0.1
+    }
+   ],
+   "result": {
+    "operands": [
+     [
+      "membrane/V"
+     ]
+    ],
+    "units": [
+     "mV"
+    ],
+    "data_item_names": [
+     "out"
+    ],
+    "trace_names_for_plotting": [
+     "membrane/V"
+    ],
+    "item_names_for_plotting": [
+     "membrane/V"
+    ],
+    "experiment_idxs": [
+     0
+    ],
+    "subexperiment_idxs": [
+     1
+    ],
+    "data_types": [
+     "series"
+    ],
+    "values": [
+     [
+      1,
+      2,
+      3
+     ]
+    ],
+    "stds": [
+     [
+      0.5,
+      0.5,
+      0.5
+     ]
+    ],
+    "obs_dts": [
+     0.1
+    ],
+    "operations": [
+     null
+    ],
+    "operation_kwargs": [
+     {}
+    ]
+   }
+  },
+  {
+   "name": "a series with one std",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "data_type": "series",
+     "value": [
+      1,
+      2,
+      3
+     ],
+     "std": [
+      0.5
+     ],
+     "obs_dt": 0.1
+    }
+   ],
+   "result": {
+    "operands": [
+     [
+      "membrane/V"
+     ]
+    ],
+    "units": [
+     "mV"
+    ],
+    "data_item_names": [
+     "out"
+    ],
+    "trace_names_for_plotting": [
+     "membrane/V"
+    ],
+    "item_names_for_plotting": [
+     "membrane/V"
+    ],
+    "experiment_idxs": [
+     0
+    ],
+    "subexperiment_idxs": [
+     1
+    ],
+    "data_types": [
+     "series"
+    ],
+    "values": [
+     [
+      1,
+      2,
+      3
+     ]
+    ],
+    "stds": [
+     [
+      0.5
+     ]
+    ],
+    "obs_dts": [
+     0.1
+    ],
+    "operations": [
+     null
+    ],
+    "operation_kwargs": [
+     {}
+    ]
+   }
+  },
+  {
+   "name": "a series without values",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "data_type": "series"
+    }
+   ],
+   "result": {
+    "operands": [
+     [
+      "membrane/V"
+     ]
+    ],
+    "units": [
+     "mV"
+    ],
+    "data_item_names": [
+     "out"
+    ],
+    "trace_names_for_plotting": [
+     "membrane/V"
+    ],
+    "item_names_for_plotting": [
+     "membrane/V"
+    ],
+    "experiment_idxs": [
+     0
+    ],
+    "subexperiment_idxs": [
+     1
+    ],
+    "data_types": [
+     "series"
+    ],
+    "values": [
+     null
+    ],
+    "stds": [
+     null
+    ],
+    "obs_dts": [
+     null
+    ],
+    "operations": [
+     null
+    ],
+    "operation_kwargs": [
+     {}
+    ]
+   }
+  },
+  {
+   "name": "the legacy variable key",
+   "prediction_items": [
+    {
+     "variable": "membrane/V",
+     "unit": "mV"
+    }
+   ],
+   "result": {
+    "operands": [
+     [
+      "membrane/V"
+     ]
+    ],
+    "units": [
+     "mV"
+    ],
+    "data_item_names": [
+     "membrane/V"
+    ],
+    "trace_names_for_plotting": [
+     "membrane/V"
+    ],
+    "item_names_for_plotting": [
+     "membrane/V"
+    ],
+    "experiment_idxs": [
+     0
+    ],
+    "subexperiment_idxs": [
+     1
+    ],
+    "data_types": [
+     null
+    ],
+    "values": [
+     null
+    ],
+    "stds": [
+     null
+    ],
+    "obs_dts": [
+     null
+    ],
+    "operations": [
+     null
+    ],
+    "operation_kwargs": [
+     {}
+    ]
+   }
+  },
+  {
+   "name": "the legacy name_for_plotting key",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "name_for_plotting": "V"
+    }
+   ],
+   "result": {
+    "operands": [
+     [
+      "membrane/V"
+     ]
+    ],
+    "units": [
+     "mV"
+    ],
+    "data_item_names": [
+     "out"
+    ],
+    "trace_names_for_plotting": [
+     "V"
+    ],
+    "item_names_for_plotting": [
+     "V"
+    ],
+    "experiment_idxs": [
+     0
+    ],
+    "subexperiment_idxs": [
+     1
+    ],
+    "data_types": [
+     null
+    ],
+    "values": [
+     null
+    ],
+    "stds": [
+     null
+    ],
+    "obs_dts": [
+     null
+    ],
+    "operations": [
+     null
+    ],
+    "operation_kwargs": [
+     {}
+    ]
+   }
+  },
+  {
+   "name": "nulls take the defaults",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "experiment_idx": null,
+     "subexperiment_idx": null,
+     "trace_name_for_plotting": null,
+     "operation": null,
+     "operation_kwargs": null
+    }
+   ],
+   "result": {
+    "operands": [
+     [
+      "membrane/V"
+     ]
+    ],
+    "units": [
+     "mV"
+    ],
+    "data_item_names": [
+     "out"
+    ],
+    "trace_names_for_plotting": [
+     "membrane/V"
+    ],
+    "item_names_for_plotting": [
+     "membrane/V"
+    ],
+    "experiment_idxs": [
+     0
+    ],
+    "subexperiment_idxs": [
+     1
+    ],
+    "data_types": [
+     null
+    ],
+    "values": [
+     null
+    ],
+    "stds": [
+     null
+    ],
+    "obs_dts": [
+     null
+    ],
+    "operations": [
+     null
+    ],
+    "operation_kwargs": [
+     {}
+    ]
+   }
+  },
+  {
+   "name": "no operands",
+   "prediction_items": [
+    {
+     "data_item_name": "membrane/V",
+     "unit": "mV"
+    }
+   ],
+   "result": {
+    "operands": [
+     [
+      "membrane/V"
+     ]
+    ],
+    "units": [
+     "mV"
+    ],
+    "data_item_names": [
+     "membrane/V"
+    ],
+    "trace_names_for_plotting": [
+     "membrane/V"
+    ],
+    "item_names_for_plotting": [
+     "membrane/V"
+    ],
+    "experiment_idxs": [
+     0
+    ],
+    "subexperiment_idxs": [
+     1
+    ],
+    "data_types": [
+     null
+    ],
+    "values": [
+     null
+    ],
+    "stds": [
+     null
+    ],
+    "obs_dts": [
+     null
+    ],
+    "operations": [
+     null
+    ],
+    "operation_kwargs": [
+     {}
+    ]
+   }
+  },
+  {
+   "name": "empty operands",
+   "prediction_items": [
+    {
+     "data_item_name": "membrane/V",
+     "operands": [],
+     "unit": "mV"
+    }
+   ],
+   "result": {
+    "operands": [
+     [
+      "membrane/V"
+     ]
+    ],
+    "units": [
+     "mV"
+    ],
+    "data_item_names": [
+     "membrane/V"
+    ],
+    "trace_names_for_plotting": [
+     "membrane/V"
+    ],
+    "item_names_for_plotting": [
+     "membrane/V"
+    ],
+    "experiment_idxs": [
+     0
+    ],
+    "subexperiment_idxs": [
+     1
+    ],
+    "data_types": [
+     null
+    ],
+    "values": [
+     null
+    ],
+    "stds": [
+     null
+    ],
+    "obs_dts": [
+     null
+    ],
+    "operations": [
+     null
+    ],
+    "operation_kwargs": [
+     {}
+    ]
+   }
+  },
+  {
+   "name": "a reference to an earlier feature",
+   "prediction_items": [
+    {
+     "data_item_name": "peak",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "operation": "max"
+    },
+    {
+     "data_item_name": "rel",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "operation": "ratio",
+     "operation_kwargs": {
+      "of": "peak"
+     }
+    }
+   ],
+   "result": {
+    "operands": [
+     [
+      "membrane/V"
+     ],
+     [
+      "membrane/V"
+     ]
+    ],
+    "units": [
+     "mV",
+     "mV"
+    ],
+    "data_item_names": [
+     "peak",
+     "rel"
+    ],
+    "trace_names_for_plotting": [
+     "membrane/V",
+     "membrane/V"
+    ],
+    "item_names_for_plotting": [
+     "membrane/V",
+     "membrane/V"
+    ],
+    "experiment_idxs": [
+     0,
+     0
+    ],
+    "subexperiment_idxs": [
+     1,
+     1
+    ],
+    "data_types": [
+     null,
+     null
+    ],
+    "values": [
+     null,
+     null
+    ],
+    "stds": [
+     null,
+     null
+    ],
+    "obs_dts": [
+     null,
+     null
+    ],
+    "operations": [
+     "max",
+     "ratio"
+    ],
+    "operation_kwargs": [
+     {},
+     {
+      "of": "peak"
+     }
+    ]
+   }
+  },
+  {
+   "name": "an experiment_idx of true",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "experiment_idx": true
+    }
+   ],
+   "result": {
+    "operands": [
+     [
+      "membrane/V"
+     ]
+    ],
+    "units": [
+     "mV"
+    ],
+    "data_item_names": [
+     "out"
+    ],
+    "trace_names_for_plotting": [
+     "membrane/V"
+    ],
+    "item_names_for_plotting": [
+     "membrane/V"
+    ],
+    "experiment_idxs": [
+     true
+    ],
+    "subexperiment_idxs": [
+     0
+    ],
+    "data_types": [
+     null
+    ],
+    "values": [
+     null
+    ],
+    "stds": [
+     null
+    ],
+    "obs_dts": [
+     null
+    ],
+    "operations": [
+     null
+    ],
+    "operation_kwargs": [
+     {}
+    ]
+   }
+  },
+  {
+   "name": "kwargs that aren't references",
+   "prediction_items": [
+    {
+     "data_item_name": "a",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "operation": "max_in_range",
+     "operation_kwargs": {
+      "start_frac": 0.5,
+      "end_frac": 1,
+      "label": "nothing"
+     }
+    }
+   ],
+   "result": {
+    "operands": [
+     [
+      "membrane/V"
+     ]
+    ],
+    "units": [
+     "mV"
+    ],
+    "data_item_names": [
+     "a"
+    ],
+    "trace_names_for_plotting": [
+     "membrane/V"
+    ],
+    "item_names_for_plotting": [
+     "membrane/V"
+    ],
+    "experiment_idxs": [
+     0
+    ],
+    "subexperiment_idxs": [
+     1
+    ],
+    "data_types": [
+     null
+    ],
+    "values": [
+     null
+    ],
+    "stds": [
+     null
+    ],
+    "obs_dts": [
+     null
+    ],
+    "operations": [
+     "max_in_range"
+    ],
+    "operation_kwargs": [
+     {
+      "start_frac": 0.5,
+      "end_frac": 1,
+      "label": "nothing"
+     }
+    ]
+   }
+  },
+  {
+   "name": "not a list",
+   "prediction_items": {
+    "out": {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV"
+    }
+   },
+   "error": "prediction_items must be a list of dict entries, got <class 'dict'>"
+  },
+  {
+   "name": "an entry not a dict",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV"
+    },
+    3
+   ],
+   "error": "prediction_items[1] must be a dict, got <class 'int'>"
+  },
+  {
+   "name": "an unknown key",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "colour": "r",
+     "weight": 1
+    }
+   ],
+   "error": "Unknown keys in prediction_items[0] not in schema: ['colour', 'weight']"
+  },
+  {
+   "name": "no unit",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ]
+    }
+   ],
+   "error": "Missing required keys in prediction_items[0]: ['unit']"
+  },
+  {
+   "name": "no name nor operands",
+   "prediction_items": [
+    {
+     "unit": "mV"
+    }
+   ],
+   "error": "Missing required keys in prediction_items[0]: ['data_item_name', 'operands']"
+  },
+  {
+   "name": "a null name",
+   "prediction_items": [
+    {
+     "data_item_name": null,
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV"
+    }
+   ],
+   "error": "Missing required keys in prediction_items[0]: ['data_item_name']"
+  },
+  {
+   "name": "a unit not a string",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": 1
+    }
+   ],
+   "error": "Invalid prediction_items value types:\nprediction_items[0]['unit']: expected (<class 'str'>,), got <class 'int'>"
+  },
+  {
+   "name": "operands not a list",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": "membrane/V",
+     "unit": "mV"
+    }
+   ],
+   "error": "Invalid prediction_items value types:\nprediction_items[0]['operands']: expected (<class 'list'>, <class 'tuple'>, <class 'numpy.ndarray'>), got <class 'str'>"
+  },
+  {
+   "name": "several wrong types",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": 1,
+     "experiment_idx": "0",
+     "operation_kwargs": [
+      1
+     ],
+     "value": "x"
+    }
+   ],
+   "error": "Invalid prediction_items value types:\nprediction_items[0]['unit']: expected (<class 'str'>,), got <class 'int'>\nprediction_items[0]['experiment_idx']: expected (<class 'int'>, <class 'numpy.integer'>), got <class 'str'>\nprediction_items[0]['value']: expected (<class 'int'>, <class 'float'>, <class 'numpy.integer'>, <class 'numpy.floating'>, <class 'list'>, <class 'tuple'>, <class 'numpy.ndarray'>), got <class 'str'>\nprediction_items[0]['operation_kwargs']: expected (<class 'dict'>,), got <class 'list'>"
+  },
+  {
+   "name": "a fractional experiment_idx",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "experiment_idx": 1.5
+    }
+   ],
+   "error": "Invalid prediction_items value types:\nprediction_items[0]['experiment_idx']: expected (<class 'int'>, <class 'numpy.integer'>), got <class 'float'>"
+  },
+  {
+   "name": "an experiment out of range",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV"
+    },
+    {
+     "data_item_name": "b",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "experiment_idx": 3
+    }
+   ],
+   "error": "prediction_items[1] ('b'): experiment_idx 3 is not an experiment of protocol_info, which has 3."
+  },
+  {
+   "name": "a negative experiment",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "experiment_idx": -1
+    }
+   ],
+   "error": "prediction_items[0] ('out'): experiment_idx -1 is not an experiment of protocol_info, which has 3."
+  },
+  {
+   "name": "a sub-experiment out of range",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "subexperiment_idx": 2
+    }
+   ],
+   "error": "prediction_items[0] ('out'): subexperiment_idx 2 is not a sub-experiment of experiment 0, which has 2."
+  },
+  {
+   "name": "a negative sub-experiment",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "experiment_idx": 2,
+     "subexperiment_idx": -1
+    }
+   ],
+   "error": "prediction_items[0] ('out'): subexperiment_idx -1 is not a sub-experiment of experiment 2, which has 3."
+  },
+  {
+   "name": "a value without data_type",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "value": 1.5
+    }
+   ],
+   "error": "prediction_items[0] ('out') has a value, so it needs data_type 'constant' or 'series'."
+  },
+  {
+   "name": "an unknown data_type",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "data_type": "timeseries"
+    }
+   ],
+   "error": "prediction_items[0] ('out'): data_type must be 'constant' or 'series', got 'timeseries'."
+  },
+  {
+   "name": "a constant of a list",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "data_type": "constant",
+     "value": [
+      1,
+      2
+     ]
+    }
+   ],
+   "error": "prediction_items[0] ('out') is data_type 'constant', so its value must be a single number, not a list of 2. A list of values over time is data_type 'series' (with obs_dt)."
+  },
+  {
+   "name": "a constant with a list of stds",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "data_type": "constant",
+     "value": 1.5,
+     "std": [
+      1
+     ]
+    }
+   ],
+   "error": "prediction_items[0] ('out') is data_type 'constant', so its std must be a single number, not a list."
+  },
+  {
+   "name": "a series of one number",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "data_type": "series",
+     "value": 1.5,
+     "obs_dt": 0.1
+    }
+   ],
+   "error": "prediction_items[0] ('out') is data_type 'series', so its value must be a list of samples (k * obs_dt apart), not the single number 1.5. A single number is data_type 'constant'."
+  },
+  {
+   "name": "a series with stds of another length",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "data_type": "series",
+     "value": [
+      1,
+      2,
+      3
+     ],
+     "std": [
+      1,
+      2
+     ],
+     "obs_dt": 0.1
+    }
+   ],
+   "error": "prediction_items[0] ('out') is a series of 3 values but has 2 stds; give one std per value, or a single number."
+  },
+  {
+   "name": "a series without obs_dt",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "data_type": "series",
+     "value": [
+      1,
+      2
+     ]
+    }
+   ],
+   "error": "prediction_items[0] ('out') is data_type 'series', so it needs obs_dt: the spacing of its samples in seconds."
+  },
+  {
+   "name": "kwargs without an operation",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "operation_kwargs": {
+      "start_frac": 0.5
+     }
+    }
+   ],
+   "error": "prediction_items[0] ('out') has operation_kwargs but no operation. operation_kwargs are the keyword arguments of the operation func; name the operation, or drop operation_kwargs."
+  },
+  {
+   "name": "kwargs with an operation spelled as none",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "operation": "none",
+     "operation_kwargs": {
+      "start_frac": 0.5
+     }
+    }
+   ],
+   "error": "prediction_items[0] ('out') has operation_kwargs but no operation. operation_kwargs are the keyword arguments of the operation func; name the operation, or drop operation_kwargs."
+  },
+  {
+   "name": "a legacy key and its replacement",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "variable": "membrane/V"
+    }
+   ],
+   "error": "prediction_items[0] sets both 'variable' and its replacement 'data_item_name'. Remove 'variable'. 'variable' is deprecated: use 'data_item_name' for the item's identity -- it must be unique, and it is what an operation_kwargs reference to another item resolves against -- and 'operands' for the model variable the item reduces. The old fallback, where a null 'operation' took its operand from 'variable', has been removed."
+  },
+  {
+   "name": "a repeated name",
+   "prediction_items": [
+    {
+     "data_item_name": "a",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV"
+    },
+    {
+     "data_item_name": "b",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV"
+    },
+    {
+     "data_item_name": "a",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV"
+    }
+   ],
+   "error": "Duplicate 'data_item_name' in obs_data: 'a' x2 (in prediction_items). Each item needs its own name: an operation_kwargs reference to a repeated one silently resolves to whichever item was evaluated last. The plotting label 'trace_name_for_plotting' may repeat."
+  },
+  {
+   "name": "a name of a data item",
+   "prediction_items": [
+    {
+     "data_item_name": "V_rest",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV"
+    }
+   ],
+   "error": "Duplicate 'data_item_name' in obs_data: 'V_rest' x2 (in data_items, prediction_items). Each item needs its own name: an operation_kwargs reference to a repeated one silently resolves to whichever item was evaluated last. The plotting label 'trace_name_for_plotting' may repeat."
+  },
+  {
+   "name": "names repeated in both lists",
+   "prediction_items": [
+    {
+     "data_item_name": "V_rest",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV"
+    },
+    {
+     "data_item_name": "V_rest",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV"
+    },
+    {
+     "data_item_name": "z",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV"
+    },
+    {
+     "data_item_name": "z",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV"
+    }
+   ],
+   "error": "Duplicate 'data_item_name' in obs_data: 'V_rest' x3 (in data_items, prediction_items); 'z' x2 (in prediction_items). Each item needs its own name: an operation_kwargs reference to a repeated one silently resolves to whichever item was evaluated last. The plotting label 'trace_name_for_plotting' may repeat."
+  },
+  {
+   "name": "a reference to a data item",
+   "prediction_items": [
+    {
+     "data_item_name": "a",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "operation": "ratio",
+     "operation_kwargs": {
+      "of": "V_rest"
+     }
+    }
+   ],
+   "error": "prediction_items[0] ('a'): operation_kwargs 'of' references data_item 'V_rest'. A prediction item's operation_kwargs may reference earlier prediction_items only."
+  },
+  {
+   "name": "a reference to a later item",
+   "prediction_items": [
+    {
+     "data_item_name": "a",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "operation": "ratio",
+     "operation_kwargs": {
+      "of": "b"
+     }
+    },
+    {
+     "data_item_name": "b",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "operation": "max"
+    }
+   ],
+   "error": "prediction_items[0] ('a'): operation_kwargs 'of' references prediction item 'b', which is not earlier in prediction_items. References are resolved in order; move 'b' before 'a'."
+  },
+  {
+   "name": "a reference to itself",
+   "prediction_items": [
+    {
+     "data_item_name": "a",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "operation": "ratio",
+     "operation_kwargs": {
+      "of": "a"
+     }
+    }
+   ],
+   "error": "prediction_items[0] ('a'): operation_kwargs 'of' references prediction item 'a', which is not earlier in prediction_items. References are resolved in order; move 'a' before 'a'."
+  },
+  {
+   "name": "a reference to a trace",
+   "prediction_items": [
+    {
+     "data_item_name": "a",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV"
+    },
+    {
+     "data_item_name": "b",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "operation": "ratio",
+     "operation_kwargs": {
+      "of": "a"
+     }
+    }
+   ],
+   "error": "prediction_items[1] ('b'): operation_kwargs 'of' references prediction item 'a', which has no operation. A reference must name an earlier prediction item with an operation that gives one number (data_type 'constant', or no data_type and an operation such as 'max' or 'mean'): only those have a value in every analysis."
+  },
+  {
+   "name": "a reference to a series",
+   "prediction_items": [
+    {
+     "data_item_name": "a",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "operation": "max",
+     "data_type": "series"
+    },
+    {
+     "data_item_name": "b",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "operation": "ratio",
+     "operation_kwargs": {
+      "of": "a"
+     }
+    }
+   ],
+   "error": "prediction_items[1] ('b'): operation_kwargs 'of' references prediction item 'a', which is a series. A reference must name an earlier prediction item with an operation that gives one number (data_type 'constant', or no data_type and an operation such as 'max' or 'mean'): only those have a value in every analysis."
+  }
+ ],
+ "fixtures": {
+  "Lotka_Volterra_forced_multi_trace_obs_data.json": {
+   "result": {
+    "operands": [
+     [
+      "Lotka_Volterra_module/x"
+     ],
+     [
+      "Lotka_Volterra_module/y"
+     ],
+     [
+      "Lotka_Volterra_module/x"
+     ],
+     [
+      "Lotka_Volterra_module/y"
+     ],
+     [
+      "Lotka_Volterra_module/x"
+     ],
+     [
+      "Lotka_Volterra_module/y"
+     ],
+     [
+      "Lotka_Volterra_module/x"
+     ],
+     [
+      "Lotka_Volterra_module/y"
+     ]
+    ],
+    "units": [
+     "dimensionless",
+     "dimensionless",
+     "dimensionless",
+     "dimensionless",
+     "dimensionless",
+     "dimensionless",
+     "dimensionless",
+     "dimensionless"
+    ],
+    "data_item_names": [
+     "Lotka_Volterra_module/x prediction",
+     "Lotka_Volterra_module/y prediction",
+     "Lotka_Volterra_module/x exp1 prediction",
+     "Lotka_Volterra_module/y exp1 prediction",
+     "Lotka_Volterra_module/x exp2 prediction",
+     "Lotka_Volterra_module/y exp2 prediction",
+     "Lotka_Volterra_module/x exp3 prediction",
+     "Lotka_Volterra_module/y exp3 prediction"
+    ],
+    "trace_names_for_plotting": [
+     "x (u_alpha trace)",
+     "y (u_alpha trace)",
+     "x (u_gamma trace)",
+     "y (u_gamma trace)",
+     "x (u_alpha const)",
+     "y (u_alpha const)",
+     "x (u_gamma const)",
+     "y (u_gamma const)"
+    ],
+    "item_names_for_plotting": [
+     "x (u_alpha trace)",
+     "y (u_alpha trace)",
+     "x (u_gamma trace)",
+     "y (u_gamma trace)",
+     "x (u_alpha const)",
+     "y (u_alpha const)",
+     "x (u_gamma const)",
+     "y (u_gamma const)"
+    ],
+    "experiment_idxs": [
+     0,
+     0,
+     1,
+     1,
+     2,
+     2,
+     3,
+     3
+    ],
+    "subexperiment_idxs": [
+     1,
+     1,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "data_types": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "values": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "stds": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "obs_dts": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "operations": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "operation_kwargs": [
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {}
+    ]
+   }
+  },
+  "NKE_pump_obs_data.json": {
+   "result": {
+    "operands": [
+     [
+      "NKE_pump/v_2"
+     ],
+     [
+      "NKE_pump/u_e"
+     ]
+    ],
+    "units": [
+     "fmol_per_s",
+     "fmol_per_s"
+    ],
+    "data_item_names": [
+     "NKE_pump/v_2",
+     "NKE_pump/u_e"
+    ],
+    "trace_names_for_plotting": [
+     "NKE_pump/v_2",
+     "NKE_pump/u_e"
+    ],
+    "item_names_for_plotting": [
+     "NKE_pump/v_2",
+     "NKE_pump/u_e"
+    ],
+    "experiment_idxs": [
+     0,
+     0
+    ],
+    "subexperiment_idxs": [
+     1,
+     1
+    ],
+    "data_types": [
+     null,
+     null
+    ],
+    "values": [
+     null,
+     null
+    ],
+    "stds": [
+     null,
+     null
+    ],
+    "obs_dts": [
+     null,
+     null
+    ],
+    "operations": [
+     null,
+     null
+    ],
+    "operation_kwargs": [
+     {},
+     {}
+    ]
+   }
+  },
+  "SN_simple_obs_data.json": {
+   "result": {
+    "operands": [
+     [
+      "var_SN/Cai"
+     ],
+     [
+      "var_SN/Cai"
+     ],
+     [
+      "soma_SN/V"
+     ],
+     [
+      "soma_SN/V"
+     ]
+    ],
+    "units": [
+     "millimolar",
+     "millimolar",
+     "milliV",
+     "milliV"
+    ],
+    "data_item_names": [
+     "var_SN/Cai prediction",
+     "var_SN/Cai exp1 prediction",
+     "soma_SN/V prediction",
+     "soma_SN/V exp1 prediction"
+    ],
+    "trace_names_for_plotting": [
+     "Ca_{ter}",
+     "Ca_{ter}",
+     "V",
+     "V"
+    ],
+    "item_names_for_plotting": [
+     "Ca_{ter}",
+     "Ca_{ter}",
+     "V",
+     "V"
+    ],
+    "experiment_idxs": [
+     0,
+     1,
+     0,
+     1
+    ],
+    "subexperiment_idxs": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "data_types": [
+     null,
+     null,
+     null,
+     null
+    ],
+    "values": [
+     null,
+     null,
+     null,
+     null
+    ],
+    "stds": [
+     null,
+     null,
+     null,
+     null
+    ],
+    "obs_dts": [
+     null,
+     null,
+     null,
+     null
+    ],
+    "operations": [
+     null,
+     null,
+     null,
+     null
+    ],
+    "operation_kwargs": [
+     {},
+     {},
+     {},
+     {}
+    ]
+   }
+  },
+  "prediction_items_536_obs_data.json": {
+   "result": {
+    "operands": [
+     [
+      "membrane/V"
+     ],
+     [
+      "i_Na/i_Na"
+     ],
+     [
+      "i_Na/i_Na"
+     ],
+     [
+      "i_Na/i_Na"
+     ],
+     [
+      "membrane/V_clamp"
+     ],
+     [
+      "i_Na/i_Na"
+     ]
+    ],
+    "units": [
+     "mV",
+     "uA_per_cm2",
+     "uA_per_cm2",
+     "uA_per_cm2",
+     "mV",
+     "uA_per_cm2"
+    ],
+    "data_item_names": [
+     "V_trace",
+     "i_Na_holding",
+     "I_peak_e0",
+     "I_peak_e1",
+     "V_step_e1",
+     "I_late_e1"
+    ],
+    "trace_names_for_plotting": [
+     "membrane/V",
+     "i_Na/i_Na",
+     "i_Na/i_Na",
+     "i_Na/i_Na",
+     "V_clamp",
+     "i_Na/i_Na"
+    ],
+    "item_names_for_plotting": [
+     "membrane/V",
+     "i_Na/i_Na",
+     "I_peak",
+     "I_peak",
+     "V_step",
+     "i_Na/i_Na"
+    ],
+    "experiment_idxs": [
+     0,
+     0,
+     0,
+     1,
+     1,
+     1
+    ],
+    "subexperiment_idxs": [
+     1,
+     0,
+     1,
+     1,
+     1,
+     1
+    ],
+    "data_types": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     "constant"
+    ],
+    "values": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     -0.5
+    ],
+    "stds": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     0.1
+    ],
+    "obs_dts": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "operations": [
+     null,
+     null,
+     "min_in_range",
+     "min_in_range",
+     "mean",
+     "max"
+    ],
+    "operation_kwargs": [
+     {},
+     {},
+     {
+      "start_frac": 0,
+      "end_frac": 0.2
+     },
+     {
+      "start_frac": 0,
+      "end_frac": 0.2
+     },
+     {},
+     {}
+    ]
+   }
+  }
+ }
+}

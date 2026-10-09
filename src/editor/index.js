@@ -5,6 +5,7 @@
  */
 export { default as ProtocolEditor } from './ProtocolEditor.vue'
 export { default as ProtocolCellEditor } from './ProtocolCellEditor.vue'
+export { default as ProtocolOutputsEditor } from './ProtocolOutputsEditor.vue'
 export { default as InlineNumber } from './InlineNumber.vue'
 export { default as NumberInput } from './NumberInput.vue'
 export { default as VariablePicker } from './VariablePicker.vue'

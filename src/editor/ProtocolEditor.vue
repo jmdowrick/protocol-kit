@@ -185,6 +185,16 @@
       </div>
     </div>
 
+    <ProtocolOutputsEditor
+      v-if="protocolInfo"
+      :document="document"
+      :variables="variables"
+      :dt="dt"
+      :confirm="confirm"
+      :palette="palette"
+      @update:document="emitDocument"
+    />
+
     <Menu ref="kindMenu" :model="kindMenuItems" popup>
       <template #item="{ item, props: itemProps }">
         <a v-bind="itemProps.action" class="kind-item" :class="{ 'kind-item--current': item.isCurrent }">
@@ -225,7 +235,8 @@
 /**
  * Edits a protocol as circulatory autogen and CUFLynx write it, in an obs_data document. Its experiments are listed
  * beside a timeline of the one shown: a column for the warm-up and for each sub-experiment, as wide as it is long,
- * and a lane for each parameter drawing how it varies. A segment opens the editor of how it varies there.
+ * and a lane for each parameter drawing how it varies. A segment opens the editor of how it varies there. Below,
+ * the outputs the experiments record (see ProtocolOutputsEditor).
  *
  * The host gives its model's variables, and optionally how to read their values, ask before removing, and colour
  * experiments; it needs nothing else of the host's own.
@@ -243,6 +254,7 @@ import { PrimeVueConfirmSymbol } from 'primevue/useconfirm'
 
 import InlineNumber from './InlineNumber.vue'
 import ProtocolCellEditor from './ProtocolCellEditor.vue'
+import ProtocolOutputsEditor from './ProtocolOutputsEditor.vue'
 import { INPUT_KINDS, findInputKind } from './protocolKinds.js'
 import VariablePicker from './VariablePicker.vue'
 import { isSettable } from './variableSearch.js'
@@ -292,6 +304,8 @@ const props = defineProps({
   palette: { type: Array, default: () => EXPERIMENT_PALETTE },
   // The host's own warnings about a protocol_info, after the editor's: `(protocolInfo) => string[]`.
   warn: { type: Function, default: null },
+  // The time between the samples a run records, to check that each output's range takes some.
+  dt: { type: Number, default: null },
 })
 const emit = defineEmits(['update:document'])
 const confirmService = inject(PrimeVueConfirmSymbol, null)

@@ -1,8 +1,8 @@
 # protocol-kit
 
 Experiment protocols for [PhLynx](https://github.com/physiomelinks/PhLynx) and
-[CUFLynx](https://github.com/physiomelinks/CUFLynx): read, check, edit and preview the `protocol_info` and observation
-items of a [circulatory_autogen](https://github.com/physiomelinks/circulatory_autogen) `obs_data.json`, the same way in
+[CUFLynx](https://github.com/physiomelinks/CUFLynx): read, check, edit and preview the `protocol_info` and outputs
+(`prediction_items`) of a [circulatory_autogen](https://github.com/physiomelinks/circulatory_autogen) `obs_data.json`, the same way in
 both apps.
 
 ## What it holds
@@ -14,6 +14,8 @@ both apps.
   - Editing: adding, removing and moving experiments and sub-experiments, and setting values and inputs. Data and
     prediction items keep pointing at the right experiment and sub-experiment.
   - Previewing an input over time.
+  - Outputs: adding, changing and removing the prediction items a run records, and checking them as circulatory_autogen
+    #536 does.
 - **Editor** (`@physiomelinks/protocol-kit/editor`): Vue 3 + PrimeVue 4 components that edit an obs_data document. The
   host app supplies its model's variables, a confirm dialog and a colour palette.
 
@@ -34,6 +36,10 @@ It follows circulatory_autogen's semantics for `obs_data.json`, so a file means 
   sub-experiment by its place in it (`subexperiment_idx`). A data item without one is in the first sub-experiment; a
   prediction item without one records over its experiment's last, as circulatory_autogen #536 reads it.
 - Edits renumber both kinds of item when experiments or sub-experiments move or go, so none points at the wrong one.
+- An output is a prediction item: the trace of the variable in `operands`, or with an `operation` (and
+  `operation_kwargs`) a feature of it, one number over its sub-experiment. An output in several experiments is one item
+  for each, sharing `item_name_for_plotting`. An item with measured data (`value`, `std`, `data_type`, `obs_dt`) is
+  validation data: edits renumber it but never change it, and nothing here writes those keys.
 - Keys it doesn't know are kept, wherever they are.
 
 ## Getting started (contributors)
@@ -101,6 +107,8 @@ Every function takes and gives plain JSON-like values; edits never change the do
 | `protocolShapes` | Expands pacing and ramp shapes into traces, as CA's `protocol_shapes.py`. | `normaliseShape`, `expandShape`, `materialiseShapes`, `validateTraceReferences`, `ProtocolShapeError` |
 | `protocolEditing` | Edits a document's protocol, renumbering its data and prediction items. | `addExperiment`, `addEmptyExperiment`, `removeExperiment`, `moveExperiment`, `addSubExperiment`, `removeSubExperiment`, `setTiming`, `addParameter`, `removeParameter`, `setValue`, `setInput`, `alignWithWarmUp`, `findObservationsAt`, `ensureProtocol` |
 | `protocolPreview` | Samples an input over time for drawing. | `interpolateTrace`, `sampleInput`, `findValueRange`, `writePolylinePoints` |
+| `predictionItems` | Edits a document's outputs, its prediction items, grouped by `item_name_for_plotting`. | `addOutput`, `updateOutput`, `removeOutput`, `listOutputs`, `isValidationData`, `findOutputKey`, `OUTPUT_OPERATIONS` |
+| `predictionValidation` | Checks prediction items as CA #536 does, with its messages, then each range for the run's `dt`. | `readPredictionItemsAsCircAutogen`, `validatePredictionItems`, `checkOperationRange`, `findPredictionItemLimits`, `readPredictionItem`, `PREDICTION_ITEM_KEYS` |
 | `protocolCompatibility` | Lists what CA, and so CUFLynx, can't run of a protocol. | `findCircAutogenLimits` |
 | `protocolNames` | Finds the variable a parameter names, as CA's name resolver does. | `findNameCandidates`, `resolveParameterName` |
 | `experimentColours` | Colours experiments as `experiment_colors` names them, or from a palette by place. | `resolveExperimentColour`, `EXPERIMENT_PALETTE`, `MATPLOTLIB_COLOURS` |
@@ -113,6 +121,38 @@ const { document } = parseObsData(text)
 const edited = removeSubExperiment(document, 0, 1) // items in it go; later ones move down
 const bytes = serialiseObsData(edited) // an ArrayBuffer, indented with 2 spaces
 ```
+
+#### Outputs
+
+```js
+import { addOutput, listOutputs, updateOutput, validatePredictionItems } from '@physiomelinks/protocol-kit'
+
+let edited = addOutput(document, {
+  name: 'I_peak', // item_name_for_plotting, and the items' names
+  operands: ['i_Na/i_Na'],
+  unit: 'uA_per_cm2',
+  experiments: [0, 1], // one item each: I_peak_<label>, or I_peak_e<index>
+  subexperiment: 1, // from 0; leave out for each experiment's last
+  operation: 'min_in_range', // leave out for a trace
+  operationKwargs: { start_frac: 0, end_frac: 0.2 },
+  traceName: 'Sodium current', // trace_name_for_plotting
+})
+const [output] = listOutputs(edited) // { key: 'output:I_peak', experiments: [0, 1], items: [...], ... }
+edited = updateOutput(edited, output.key, { experiments: [0, 1, 2] }) // items keep their names; the new one is named
+const { errors, warnings, itemErrors } = validatePredictionItems(edited, { dt: 0.01 })
+```
+
+The items name the variables as circulatory_autogen resolves them for the model it runs. One experiment's item is
+named as the output; several's add each experiment's label (letters, digits and underscores), or `e` and its index
+when it has none or shares it, and a name already taken gets `_2`, `_3`... `updateOutput` takes any of what
+`addOutput` does. Validation data keeps a key of its own (`data:<name>`), so it is never changed or removed.
+
+`validatePredictionItems` gives CA's error for each item, and those of the whole list (names repeated across data and
+prediction items), where CA stops at the first (`readPredictionItemsAsCircAutogen` does too). It also checks that each
+`*_in_range` window takes a sample: CA reduces the samples from `int(start_frac * (n - 1))` up to, not including,
+`int(end_frac * (n - 1))` of the n = `int(duration / dt) + 1` a sub-experiment records. Its warnings say which items need
+circulatory_autogen #536 (an `operation`, `operation_kwargs` or `subexperiment_idx`): released libcuflynx 0.7.3 and
+current CUFLynx reject them.
 
 ### Mounting the editor
 
@@ -148,9 +188,17 @@ const getValue = (name) => variables.find((variable) => variable.name === name)?
 | `confirm` | `(options) => Promise<boolean>` | Optional. Asks before removing something; `options` has `header`, `message`, `severity`, `acceptLabel` and `rejectLabel`. By default, PrimeVue's ConfirmDialog (the editor shows its own, in the group `protocol-kit-confirm`) when the app has `ConfirmationService`, else the browser's `confirm`. |
 | `palette` | `string[]` | Optional. Colours of experiments the file doesn't colour (`experiment_colors`), by place. By default `EXPERIMENT_PALETTE`. |
 | `warn` | `(protocolInfo) => string[]` | Optional. The app's own warnings about the protocol, shown after the editor's: what it ignores, say. |
+| `dt` | `number` | Optional. The time between the samples a run records, to check that each output's range takes some. |
+
+**Outputs.** Below the protocol, the editor lists its outputs (`ProtocolOutputsEditor`): each with its variable, its
+operation and range, its sub-experiment and its experiments, CA's errors under it, and validation data labelled and
+read-only. An output records a variable picked from `variables`: one that changes (not of `kind` `'constant'` or
+`'global_constant'`), or a parameter for a `mean`, which a run logs as one value. Its operation is one of
+circulatory_autogen's (`OUTPUT_OPERATIONS`), its range a fraction of the sub-experiment, the end not included, and its
+sub-experiment numbered from 1, or each experiment's last. Experiments without that sub-experiment can't be chosen.
 
 The editor registers PrimeVue's tooltip directive itself. Besides `ProtocolEditor`, the entry exports its parts
-(`ProtocolCellEditor`, `InlineNumber`, `NumberInput`, `VariablePicker`) and `INPUT_KINDS`, `findInputKind`,
+(`ProtocolCellEditor`, `ProtocolOutputsEditor`, `InlineNumber`, `NumberInput`, `VariablePicker`) and `INPUT_KINDS`, `findInputKind`,
 `searchVariables`, `splitVariableName` and `isSettable`.
 
 **CSS variables.** The components use the PrimeVue theme's tokens, so they follow the host's theme, light or dark. Each
@@ -184,6 +232,14 @@ Run it when circulatory_autogen changes its protocol semantics, or a fixture is 
 
 ```sh
 python scripts/generate_ca_vectors.py /path/to/circulatory_autogen
+```
+
+`scripts/generate_prediction_vectors.py` does the same for prediction items, with #536's own parser: it rewrites
+`tests/resources/prediction-vectors.json`, for its good and bad cases and every fixture with prediction items. It
+needs a Python with that circulatory_autogen's libcuflynx installed:
+
+```sh
+/path/to/venv/bin/python scripts/generate_prediction_vectors.py /path/to/circulatory_autogen
 ```
 
 ## Licence
