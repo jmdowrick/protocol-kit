@@ -1,7 +1,7 @@
 {
   "name": "@physiomelinks/protocol-kit",
   "description": "Experiment protocols for PhLynx and CUFLynx: read, check, edit and preview the protocol_info of a circulatory_autogen obs_data.json.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
