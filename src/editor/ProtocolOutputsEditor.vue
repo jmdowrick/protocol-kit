@@ -57,8 +57,9 @@
     <p v-else-if="!draft" class="outputs-empty">No outputs yet. Add a variable's trace, or a feature such as its peak in a sub-experiment.</p>
 
     <form v-if="draft" class="output-form" :aria-label="draft.key ? `Edit output ${draft.originalName}` : 'Add an output'" @submit.prevent="applyDraft">
-      <label class="form-field form-field--wide">
-        Variable
+      <!-- Not a label: one would pass a click on its caption to the button that clears the variable. -->
+      <div class="form-field form-field--wide" role="group" aria-label="Variable">
+        <span>Variable</span>
         <span v-if="draft.variable" class="picked">
           <span class="output-path">{{ draft.variable.name }}</span>
           <span v-if="draft.variable.unit" class="picked-unit">{{ draft.variable.unit }}</span>
@@ -67,12 +68,12 @@
         <VariablePicker
           v-else
           :variables="variables"
-          :filter="isOfferedVariable"
+          :describe="describeVariable"
           placeholder="Search for a variable to record…"
           aria-label="Search for a variable to record"
           @pick="pickVariable"
         />
-      </label>
+      </div>
 
       <SelectButton v-model="draft.kind" :options="KINDS" option-label="label" option-value="value" size="small" :allow-empty="false" aria-label="What it records" />
 
@@ -84,11 +85,11 @@
         <template v-if="isRangeOperation(draft.operation)">
           <label class="form-field">
             From (fraction)
-            <NumberInput v-model="draft.startFrac" aria-label="Range start, as a fraction of the sub-experiment" />
+            <NumberInput v-model="draft.startFrac" aria-label="Range start, as a fraction of the sub-experiment" @invalid="(invalid) => (draft.isStartInvalid = invalid)" />
           </label>
           <label class="form-field">
             To (fraction, not included)
-            <NumberInput v-model="draft.endFrac" aria-label="Range end, as a fraction of the sub-experiment" />
+            <NumberInput v-model="draft.endFrac" aria-label="Range end, as a fraction of the sub-experiment" @invalid="(invalid) => (draft.isEndInvalid = invalid)" />
           </label>
         </template>
       </div>
@@ -211,12 +212,21 @@ const describeOperation = (operation) => (operation ? (OUTPUT_OPERATIONS.find(({
 const describeRange = (kwargs) => `from ${kwargs.start_frac ?? 0} to ${kwargs.end_frac ?? 1} of it, the end not included`
 
 /**
- * Lists the errors of an output's items.
+ * Words an item's error for its output, which shows it once for all its items: without CA's `prediction_items[i]
+ * ('name')`, which differs between them.
+ *
+ * @param {string} message - CA's.
+ * @returns {string}
+ */
+const describeItemError = (message) => message.replace(/^prediction_items\[\d+\] \('.*?'\)(: | )/, (_, separator) => (separator === ': ' ? '' : 'It '))
+
+/**
+ * Lists the errors of an output's items, each once.
  *
  * @param {Object} output - From listOutputs.
  * @returns {string[]}
  */
-const errorsOf = (output) => output.items.flatMap(({ index }) => checked.value.itemErrors[index] ?? [])
+const errorsOf = (output) => [...new Set(output.items.flatMap(({ index }) => checked.value.itemErrors[index] ?? []).map(describeItemError))]
 
 /** Passes an edited document on. */
 const emitDocument = (document) => emit('update:document', document)
@@ -238,8 +248,9 @@ async function confirmRemovingOutput(output) {
   if (isConfirmed) emitDocument(removeOutput(props.document, output.key))
 }
 
-// The output being added or edited: `{ key, originalName, variable, kind, operation, startFrac, endFrac, name,
-// isNameTyped, traceName, subexperiment, experiments }`; key is null for a new one.
+// The output being added or edited: `{ key, originalName, variable, kind, operation, startFrac, endFrac,
+// isStartInvalid, isEndInvalid, name, isNameTyped, traceName, subexperiment, experiments }`; key is null for a new one.
+// isStartInvalid and isEndInvalid say a range field's text is no number.
 const draft = ref(null)
 
 /** Opens the form for a new output: a trace in every experiment, over its last sub-experiment. */
@@ -252,6 +263,8 @@ function startAdding() {
     operation: 'max',
     startFrac: 0,
     endFrac: 1,
+    isStartInvalid: false,
+    isEndInvalid: false,
     name: '',
     isNameTyped: false,
     traceName: null,
@@ -275,6 +288,8 @@ function startEditing(output) {
     operation: output.operation ?? 'max',
     startFrac: output.operationKwargs.start_frac ?? 0,
     endFrac: output.operationKwargs.end_frac ?? 1,
+    isStartInvalid: false,
+    isEndInvalid: false,
     name: output.name,
     isNameTyped: true,
     traceName: output.traceName,
@@ -306,21 +321,22 @@ const subOptions = computed(() => [
 const hasSub = (experiment) => draft.value?.subexperiment == null || draft.value.subexperiment < (simTimes.value[experiment]?.length ?? 0)
 
 /**
- * Whether a variable can be recorded as the draft would: one that changes, or for a mean a constant, which Myokit
- * logs as one value.
+ * Notes a parameter in the picker: only its mean can be recorded, as Myokit logs a constant as one value.
  *
  * @param {Object} variable
- * @returns {boolean}
+ * @returns {string|null} Null for the variable's label.
  */
-const isOfferedVariable = (variable) => !isSettable(variable) || (draft.value?.kind === 'feature' && draft.value.operation === 'mean')
+const describeVariable = (variable) => (isSettable(variable) ? 'A parameter: only its mean can be recorded' : null)
 
 /**
  * Records a picked variable, labelled as the host labels it, and names the draft after it unless its name was typed.
+ * A parameter makes the draft its mean, the one output it can have.
  *
  * @param {Object} variable - One of `variables`.
  */
 function pickVariable(variable) {
   draft.value.variable = variable
+  if (isSettable(variable)) Object.assign(draft.value, { kind: 'feature', operation: 'mean' })
   draft.value.traceName = variable.label && variable.label !== variable.name ? variable.label : null
   if (!draft.value.isNameTyped) draft.value.name = splitVariableName(variable.name).name
 }
@@ -366,12 +382,13 @@ const draftProblems = computed(() => {
   else if (outputs.value.some(({ key, name }) => key !== draft.value.key && key.startsWith('output:') && name === output.name)) problems.push(`An output is already named ${output.name}.`)
   if (!output.experiments.length) problems.push('Choose an experiment.')
   if (isSettable(draft.value.variable) && !(output.operation === 'mean')) problems.push(`${output.operands[0]} is a parameter: only its mean can be recorded.`)
+  if (isRangeOperation(output.operation) && (draft.value.isStartInvalid || draft.value.isEndInvalid)) problems.push('Enter the range as numbers.')
   if (problems.length) return problems
   const edited = applyOutput(output)
   const { itemErrors, errors } = validatePredictionItems(edited, { dt: props.dt ?? undefined })
   const before = new Set(checked.value.errors)
-  // The errors the draft brings, CA's message for each of its items.
-  return [...new Set([...itemErrors.flat(), ...errors].filter((message) => !before.has(message)))]
+  // The errors the draft brings, each once for all its items.
+  return [...new Set([...itemErrors.flat(), ...errors].filter((message) => !before.has(message)).map(describeItemError))]
 })
 
 /** Applies the draft, and closes the form. */
