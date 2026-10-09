@@ -5,9 +5,6 @@ Experiment protocols for [PhLynx](https://github.com/physiomelinks/PhLynx) and
 items of a [circulatory_autogen](https://github.com/physiomelinks/circulatory_autogen) `obs_data.json`, the same way in
 both apps.
 
-> **Status:** being extracted from PhLynx (`src/services/protocol/` and its protocol editor). Not yet published to npm;
-> the API may change before 0.1.0.
-
 ## What it holds
 
 - **Core** (`@physiomelinks/protocol-kit`): plain JavaScript, no framework.
