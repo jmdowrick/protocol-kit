@@ -1,0 +1,25 @@
+# Logs
+logs
+*.log
+yarn-debug.log*
+yarn-error.log*
+
+node_modules
+dist
+*.local
+coverage/
+__pycache__/
+
+# Yarn
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+.yarn/install-state.gz
+.pnp.*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.sw?

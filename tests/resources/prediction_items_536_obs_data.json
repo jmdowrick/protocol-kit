@@ -1,0 +1,159 @@
+{
+  "protocol_info": {
+    "pre_times": [
+      100,
+      100
+    ],
+    "sim_times": [
+      [
+        50,
+        200
+      ],
+      [
+        50,
+        200
+      ]
+    ],
+    "params_to_change": {
+      "membrane/V_clamp": [
+        [
+          -80,
+          "step_e0"
+        ],
+        [
+          -80,
+          "step_e1"
+        ]
+      ],
+      "parameters/g_Na": [
+        [
+          0.12,
+          0.12
+        ],
+        [
+          0.12,
+          0.06
+        ]
+      ]
+    },
+    "protocol_shapes": {
+      "step_e0": {
+        "baseline": -80,
+        "events": [
+          {
+            "level": -20,
+            "start": 0,
+            "length": 200
+          }
+        ]
+      },
+      "step_e1": {
+        "baseline": -80,
+        "events": [
+          {
+            "level": 0,
+            "start": 0,
+            "length": 200
+          }
+        ]
+      }
+    },
+    "experiment_labels": [
+      "V_step -20",
+      "V_step 0, half g_Na"
+    ],
+    "experiment_colors": [
+      "b",
+      "#e34948"
+    ]
+  },
+  "data_items": [
+    {
+      "data_item_name": "V_rest",
+      "data_type": "constant",
+      "unit": "mV",
+      "weight": 1,
+      "operands": [
+        "membrane/V"
+      ],
+      "operation": "mean",
+      "value": -80,
+      "std": 1,
+      "experiment_idx": 0,
+      "subexperiment_idx": 0
+    }
+  ],
+  "prediction_items": [
+    {
+      "data_item_name": "V_trace",
+      "operands": [
+        "membrane/V"
+      ],
+      "unit": "mV",
+      "experiment_idx": 0
+    },
+    {
+      "data_item_name": "i_Na_holding",
+      "operands": [
+        "i_Na/i_Na"
+      ],
+      "unit": "uA_per_cm2",
+      "experiment_idx": 0,
+      "subexperiment_idx": 0
+    },
+    {
+      "data_item_name": "I_peak_e0",
+      "operands": [
+        "i_Na/i_Na"
+      ],
+      "unit": "uA_per_cm2",
+      "operation": "min_in_range",
+      "operation_kwargs": {
+        "start_frac": 0,
+        "end_frac": 0.2
+      },
+      "experiment_idx": 0,
+      "subexperiment_idx": 1,
+      "item_name_for_plotting": "I_peak"
+    },
+    {
+      "data_item_name": "I_peak_e1",
+      "operands": [
+        "i_Na/i_Na"
+      ],
+      "unit": "uA_per_cm2",
+      "operation": "min_in_range",
+      "operation_kwargs": {
+        "start_frac": 0,
+        "end_frac": 0.2
+      },
+      "experiment_idx": 1,
+      "subexperiment_idx": 1,
+      "item_name_for_plotting": "I_peak"
+    },
+    {
+      "data_item_name": "V_step_e1",
+      "operands": [
+        "membrane/V_clamp"
+      ],
+      "unit": "mV",
+      "operation": "mean",
+      "experiment_idx": 1,
+      "subexperiment_idx": 1,
+      "item_name_for_plotting": "V_step",
+      "trace_name_for_plotting": "V_clamp"
+    },
+    {
+      "data_item_name": "I_late_e1",
+      "operands": [
+        "i_Na/i_Na"
+      ],
+      "unit": "uA_per_cm2",
+      "operation": "max",
+      "experiment_idx": 1,
+      "data_type": "constant",
+      "value": -0.5,
+      "std": 0.1
+    }
+  ]
+}
