@@ -20,6 +20,8 @@ export default defineConfig({
     },
     rollupOptions: {
       external: (id) => EXTERNAL.some((pattern) => pattern.test(id)),
+      // The core both entries share, named as it is rather than after its first module.
+      output: { manualChunks: (id) => (id.includes('/src/core/') ? 'core' : undefined) },
     },
     sourcemap: true,
   },

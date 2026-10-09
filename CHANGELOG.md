@@ -7,3 +7,6 @@
 - `resolveExperimentColour` moves here from PhLynx's chart series, and takes the palette to fall back on.
 - Removing a sub-experiment renumbers prediction items that name one (`subexperiment_idx`), as it did data items, and
   removes those in it. `findObservationsAt` lists them too.
+- The protocol editor, extracted from PhLynx (`ProtocolEditor`, `ProtocolCellEditor`, `InlineNumber`, `NumberInput`),
+  independent of its host: it takes the model's variables as a plain list (`variables`), and optionally `getValue`,
+  `confirm` and `palette`. `VariablePicker` and `searchVariables` replace PhLynx's variable index for it.

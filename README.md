@@ -116,14 +116,56 @@ const bytes = serialiseObsData(edited) // an ArrayBuffer, indented with 2 spaces
 
 ### Mounting the editor
 
-```js
+The editor is a `v-model` on an obs_data document (`document` prop, `update:document` event): each edit passes on a
+new document, never changing the one given, so the host keeps it, saves it and undoes edits as it likes. It needs
+Vue 3.5, PrimeVue 4 (styled, with a theme such as Aura), papaparse and [PrimeIcons](https://github.com/primefaces/primeicons).
+
+```vue
+<template>
+  <ProtocolEditor v-model:document="obsData" :variables="variables" :get-value="getValue" />
+</template>
+
+<script setup>
+import { ref } from 'vue'
 import { ProtocolEditor } from '@physiomelinks/protocol-kit/editor'
 import '@physiomelinks/protocol-kit/editor.css'
+import 'primeicons/primeicons.css'
+
+const obsData = ref(null) // e.g. parseObsData(text).document; null offers to create a protocol
+const variables = [
+  { name: 'membrane/g_Na', label: 'Sodium conductance', unit: 'mS_per_cm2', kind: 'constant', value: 0.12 },
+  { name: 'membrane/V', unit: 'mV', kind: 'variable' },
+]
+const getValue = (name) => variables.find((variable) => variable.name === name)?.value
+</script>
 ```
 
-The editor is a `v-model` on an obs_data document (`document` prop, `update:document` event). The host supplies its
-model's variables, a way to read a variable's value, a confirm dialog and a colour palette. Its props and the CSS
-variables it uses are documented here with the first release.
+| Prop | | |
+| --- | --- | --- |
+| `document` | `Object \| null` | The obs_data document (`v-model:document`). |
+| `variables` | `Array<{name, label?, unit?, kind?, value?}>` | The model's variables. `name` is as the protocol names it (`component/variable`, as `params_to_change` keys). Those of `kind` `'constant'` or `'global_constant'` can be added for the protocol to set; `unit` labels its lane. The picker searches `name` and `label`. |
+| `getValue` | `(name) => number \| string \| undefined` | Optional. A variable's value in the model, which a parameter starts from when added. By default, its `value` in `variables`. |
+| `confirm` | `(options) => Promise<boolean>` | Optional. Asks before removing something; `options` has `header`, `message`, `severity`, `acceptLabel` and `rejectLabel`. By default, PrimeVue's ConfirmDialog (the editor shows its own, in the group `protocol-kit-confirm`) when the app has `ConfirmationService`, else the browser's `confirm`. |
+| `palette` | `string[]` | Optional. Colours of experiments the file doesn't colour (`experiment_colors`), by place. By default `EXPERIMENT_PALETTE`. |
+
+The editor registers PrimeVue's tooltip directive itself. Besides `ProtocolEditor`, the entry exports its parts
+(`ProtocolCellEditor`, `InlineNumber`, `NumberInput`, `VariablePicker`) and `INPUT_KINDS`, `findInputKind`,
+`searchVariables`, `splitVariableName` and `isSettable`.
+
+**CSS variables.** The components use the PrimeVue theme's tokens, so they follow the host's theme, light or dark. Each
+has a fallback (Aura's light value) for a host without them:
+
+| Variable | Fallback | Used for |
+| --- | --- | --- |
+| `--p-text-color` | `currentColor` | Headings |
+| `--p-text-muted-color` | `#64748b` | Secondary text, units, captions |
+| `--p-primary-color` | `#10b981` | Focus rings, the current experiment, links |
+| `--p-content-background` | `#ffffff` | Chips over lanes |
+| `--p-content-hover-background` | `#f1f5f9` | Column heads, lanes, hovered experiments |
+| `--p-content-border-color` | `#e2e8f0` | The experiment list's border, chips |
+| `--p-inputtext-border-color` | `#cbd5e1` | The experiment name's border, on hover |
+| `--p-orange-400`, `--p-orange-500` | `#fb923c`, `#f97316` | Warnings: inputs CUFLynx can't run, inputs starting with the warm-up |
+| `--p-red-500` | `#ef4444` | Errors: inputs circulatory_autogen refuses, numbers that aren't |
 
 ## Fixtures and golden vectors
 
