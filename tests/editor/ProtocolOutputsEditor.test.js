@@ -75,7 +75,7 @@ describe('ProtocolOutputsEditor', () => {
   it('lists the outputs, validation data read-only, and warns what needs CA #536', () => {
     mountOutputs(readFixture('prediction_items_536_obs_data.json'))
     const outputs = wrapper.findAll('.output')
-    expect(outputs.map((output) => output.find('.output-name').text())).toEqual(['V_trace', 'i_Na_holding', 'I_peak', 'V_step', 'I_late_e1'])
+    expect(outputs.map((output) => output.find('.output-name').text())).toEqual(['membrane/V', 'i_Na/i_Na', 'I_peak', 'V_step', 'i_Na/i_Na'])
     const peak = outputs[2]
     expect(peak.find('.output-chip').text()).toBe('Minimum in a range')
     expect(peak.find('.output-meta').text()).toContain('over sub-experiment 2')
@@ -85,8 +85,8 @@ describe('ProtocolOutputsEditor', () => {
 
     const data = outputs[4]
     expect(data.find('.output-chip--data').text()).toBe('Validation data')
-    expect(data.find('button[aria-label="Edit output I_late_e1"]').exists()).toBe(false)
-    expect(data.find('button[aria-label="Remove output I_late_e1"]').exists()).toBe(false)
+    expect(data.find('button[aria-label="Edit output i_Na/i_Na"]').exists()).toBe(false)
+    expect(data.find('button[aria-label="Remove output i_Na/i_Na"]').exists()).toBe(false)
     expect(wrapper.find('.messages').text()).toContain('needs circulatory_autogen with #536; released libcuflynx 0.7.3 and current CUFLynx reject this file')
   })
 
@@ -170,6 +170,19 @@ describe('ProtocolOutputsEditor', () => {
     expect(items[5]).toEqual(readFixture('prediction_items_536_obs_data.json').prediction_items[5])
   })
 
+  it("won't edit an output with two items in one experiment, saying why", () => {
+    const obsData = readFixture('prediction_items_536_obs_data.json')
+    obsData.prediction_items = [
+      { data_item_name: 'V_max', operands: ['membrane/V'], unit: 'mV', operation: 'max' },
+      { data_item_name: 'V_min', operands: ['membrane/V'], unit: 'mV', operation: 'min' },
+    ]
+    mountOutputs(obsData)
+    const [output] = wrapper.findAll('.output')
+    expect(output.find('button[aria-label="Edit output membrane/V"]').attributes('disabled')).toBeDefined()
+    expect(output.find('button[aria-label="Remove output membrane/V"]').attributes('disabled')).toBeUndefined()
+    expect(output.find('.output-warning').text()).toContain("more than one item in an experiment (V_max, V_min), so it can't be edited here")
+  })
+
   it('asks before removing an output', async () => {
     const confirm = vi.fn(async () => true)
     mountOutputs(readFixture('prediction_items_536_obs_data.json'), { confirm })
@@ -190,7 +203,7 @@ describe('ProtocolEditor', () => {
     })
     const outputs = wrapper.findComponent(ProtocolOutputsEditor)
     expect(outputs.props('dt')).toBe(0.01)
-    await outputs.find('button[aria-label="Remove output V_trace"]').trigger('click')
+    await outputs.find('button[aria-label="Remove output membrane/V"]').trigger('click')
     await flushPromises()
     expect(confirm).toHaveBeenCalledOnce()
     expect(wrapper.emitted('update:document')[0][0].prediction_items).toHaveLength(5)

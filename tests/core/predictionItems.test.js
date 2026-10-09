@@ -98,11 +98,12 @@ describe('listOutputs', () => {
   it('groups the items of an output, and keeps validation data apart', () => {
     const outputs = listOutputs(readFixture('prediction_items_536_obs_data.json'))
     expect(outputs.map(({ key, kind, experiments, isValidationData: isData }) => [key, kind, experiments, isData])).toEqual([
-      ['output:V_trace', 'trace', [0], false],
-      ['output:i_Na_holding', 'trace', [0], false],
+      // Named as CA names them for plotting: these have no item_name_for_plotting.
+      ['output:membrane/V', 'trace', [0], false],
+      ['output:i_Na/i_Na', 'trace', [0], false],
       ['output:I_peak', 'feature', [0, 1], false],
       ['output:V_step', 'feature', [1], false],
-      ['data:I_late_e1', 'feature', [1], true],
+      ['data:i_Na/i_Na', 'feature', [1], true],
     ])
     const peak = outputs[2]
     expect(peak).toMatchObject({ name: 'I_peak', operands: ['i_Na/i_Na'], operation: 'min_in_range', operationKwargs: { start_frac: 0, end_frac: 0.2 }, subexperiment: 1, isUniform: true })
@@ -117,6 +118,21 @@ describe('listOutputs', () => {
     expect(listOutputs(document)[0].isUniform).toBe(false)
     expect(listOutputs(null)).toEqual([])
     expect(listOutputs([{ data_item_name: 'bare' }])).toEqual([])
+  })
+
+  it('groups items as CA names them for plotting, legacy keys too', () => {
+    const items = [
+      { data_item_name: 'V_max', operands: ['membrane/V'], unit: 'mV', operation: 'max' },
+      { data_item_name: 'V_min', operands: ['membrane/V'], unit: 'mV', operation: 'min' },
+      { variable: 'membrane/I', unit: 'nA', operation: 'max' },
+      { data_item_name: 'V_pk', name_for_plotting: 'Vpk', operands: ['membrane/V'], unit: 'mV', operation: 'max' },
+      { data_item_name: 'V_late', trace_name_for_plotting: 'Voltage', operands: ['membrane/V'], unit: 'mV', operation: 'max' },
+    ]
+    const document = { protocol_info: { sim_times: [[1]] }, prediction_items: items }
+    const outputs = listOutputs(document)
+    expect(outputs.map(({ name }) => name)).toEqual(['membrane/V', 'membrane/I', 'Vpk', 'Voltage'])
+    expect(new Set(readPredictionItemsAsCircAutogen(document).predictionInfo.item_names_for_plotting)).toEqual(new Set(outputs.map(({ name }) => name)))
+    expect(outputs.map(({ hasRepeatedExperiment }) => hasRepeatedExperiment)).toEqual([true, false, false, false])
   })
 
   it('tells validation data by its measured data', () => {
@@ -165,10 +181,23 @@ describe('updateOutput and removeOutput', () => {
     expect(placesOf(removeOutput(document, 'output:I_peak'))).toEqual([['V', 0, undefined]])
   })
 
+  it('never changes an output with two items in one experiment, which would drop one', () => {
+    const shared = {
+      ...DOCUMENT,
+      prediction_items: [
+        { data_item_name: 'V_a', operands: ['membrane/V'], unit: 'mV', experiment_idx: 0, subexperiment_idx: 0, item_name_for_plotting: 'V' },
+        { data_item_name: 'V_b', operands: ['membrane/V'], unit: 'mV', experiment_idx: 0, subexperiment_idx: 1, item_name_for_plotting: 'V' },
+      ],
+    }
+    expect(listOutputs(shared)[0]).toMatchObject({ experiments: [0], isUniform: false, hasRepeatedExperiment: true })
+    expect(updateOutput(shared, 'output:V', { unit: 'V' })).toBe(shared)
+    expect(removeOutput(shared, 'output:V').prediction_items).toEqual([])
+  })
+
   it('never changes or removes validation data', () => {
     const fixture = readFixture('prediction_items_536_obs_data.json')
-    expect(updateOutput(fixture, 'data:I_late_e1', { unit: 'mA' })).toBe(fixture)
-    expect(removeOutput(fixture, 'data:I_late_e1')).toBe(fixture)
+    expect(updateOutput(fixture, 'data:i_Na/i_Na', { unit: 'mA' })).toBe(fixture)
+    expect(removeOutput(fixture, 'data:i_Na/i_Na')).toBe(fixture)
     expect(removeOutput(fixture, 'output:nothing')).toBe(fixture)
   })
 })
@@ -193,7 +222,7 @@ describe('outputs through edits of the protocol', () => {
     // Only places change: the validation item's data, and each output's definition, stay.
     expect(moved.prediction_items[0]).toEqual({ ...document.prediction_items[0], experiment_idx: 0 })
     expect(listOutputs(moved).map(({ key, experiments }) => [key, experiments])).toEqual([
-      ['data:I_late', [0]],
+      ['data:i_Na/i_Na', [0]],
       ['output:I_peak', [2, 0]],
       ['output:V', [2, 0, 1]],
     ])

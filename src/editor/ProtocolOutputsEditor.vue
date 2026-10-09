@@ -18,7 +18,16 @@
           <span v-if="output.isValidationData" class="output-chip output-chip--data" v-tooltip.bottom="'It has measured data (value, std, data_type or obs_dt). The editor leaves it as it is.'">Validation data</span>
           <span class="column-spacer"></span>
           <template v-if="!output.isValidationData">
-            <Button icon="pi pi-pencil" text rounded size="small" severity="secondary" :aria-label="`Edit output ${output.name}`" @click="startEditing(output)" />
+            <Button
+              icon="pi pi-pencil"
+              text
+              rounded
+              size="small"
+              severity="secondary"
+              :aria-label="`Edit output ${output.name}`"
+              :disabled="output.hasRepeatedExperiment"
+              @click="startEditing(output)"
+            />
             <Button icon="pi pi-trash" text rounded size="small" severity="secondary" :aria-label="`Remove output ${output.name}`" @click="confirmRemovingOutput(output)" />
           </template>
         </div>
@@ -33,7 +42,12 @@
             <span class="output-swatch" :style="{ background: colourAt(experiment) }" aria-hidden="true"></span>{{ nameAt(experiment) }}
           </span>
         </div>
-        <p v-if="!output.isUniform" class="output-warning">
+        <p v-if="output.hasRepeatedExperiment && !output.isValidationData" class="output-warning">
+          <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+          It has more than one item in an experiment ({{ output.items.map(({ name }) => name).join(', ') }}), so it can't be edited here, as an output
+          has one item per experiment. Give each its own item_name_for_plotting in the file to edit them apart.
+        </p>
+        <p v-else-if="!output.isUniform" class="output-warning">
           <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
           Its items differ in more than their experiment; editing it writes them all alike.
         </p>

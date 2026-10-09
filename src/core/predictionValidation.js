@@ -88,6 +88,24 @@ function migrateLegacyKeys(entry, index) {
 }
 
 /**
+ * Names the group an item is plotted in, as CA defaults its item_name_for_plotting: legacy keys migrated, its
+ * item_name_for_plotting, else its trace_name_for_plotting, else its first operand, else its data_item_name.
+ *
+ * @param {Object} item - A prediction item, as obs_data has it.
+ * @returns {string} '' when it names none.
+ */
+export function nameItemForPlotting(item) {
+  let entry
+  try {
+    entry = migrateLegacyKeys(isMapping(item) ? item : {}, 0)
+  } catch {
+    entry = { ...item }
+  }
+  const traceName = entry.trace_name_for_plotting ?? SCHEMA.trace_name_for_plotting.fallback(entry)
+  return formatPythonStr(entry.item_name_for_plotting ?? traceName)
+}
+
+/**
  * Checks the shape of an item's data: a constant's value and std are single numbers, a series' value a list, its std
  * one number or one per value, and it has an obs_dt. Ported from CA's check_value_shape.
  *
