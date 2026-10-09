@@ -178,6 +178,16 @@ describe('ProtocolFeaturePlotsEditor', () => {
     expect(wrapper.find('.add-plot-button').attributes('disabled')).toBeDefined()
     expect(wrapper.find('button[aria-label="Edit feature plot odd"]').attributes('disabled')).toBeDefined()
   })
+
+  it('names an unnamed plot as the list shows it, and drops the name from an error in either quote', async () => {
+    const confirm = vi.fn(async () => false)
+    const plots = [{ kind: 'feature_vs_feature', x: 'V_step', y: 'I_peak' }, { name: "I's curve", kind: 'feature_vs_feature', x: 'none', y: 'I_peak' }]
+    mountPlots({ ...DOCUMENT, prediction_plots: plots }, { confirm })
+    expect(wrapper.find('button[aria-label="Edit feature plot (unnamed)"]').exists()).toBe(true)
+    await wrapper.find('button[aria-label="Remove feature plot (unnamed)"]').trigger('click')
+    expect(confirm.mock.calls[0][0].header).toBe('Remove the feature plot (unnamed)?')
+    expect(wrapper.findAll('.plot')[1].find('.p-message').text()).toBe("x names no prediction items: none has the item_name_for_plotting 'none'.")
+  })
 })
 
 describe('ProtocolOutputsEditor', () => {

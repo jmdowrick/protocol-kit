@@ -13,8 +13,8 @@
           <span class="plot-name">{{ plot?.name || '(unnamed)' }}</span>
           <span class="plot-chip">{{ describeKind(plot?.kind) }}</span>
           <span class="column-spacer"></span>
-          <Button icon="pi pi-pencil" text rounded size="small" severity="secondary" :aria-label="`Edit feature plot ${plot?.name}`" :disabled="!isEditable(plot)" @click="startEditing(index)" />
-          <Button icon="pi pi-trash" text rounded size="small" severity="secondary" :aria-label="`Remove feature plot ${plot?.name}`" @click="confirmRemoving(index)" />
+          <Button icon="pi pi-pencil" text rounded size="small" severity="secondary" :aria-label="`Edit feature plot ${plot?.name || '(unnamed)'}`" :disabled="!isEditable(plot)" @click="startEditing(index)" />
+          <Button icon="pi pi-trash" text rounded size="small" severity="secondary" :aria-label="`Remove feature plot ${plot?.name || '(unnamed)'}`" @click="confirmRemoving(index)" />
         </div>
         <div class="plot-meta">
           <span>{{ describeAxes(plot) }}</span>
@@ -166,12 +166,13 @@ function describeAxes(plot) {
 }
 
 /**
- * Words a plot's error for its entry, without the `prediction_plots[i] ('name'): ` that names it.
+ * Words a plot's error for its entry, without the `prediction_plots[i] ('name'): ` that names it, in either of
+ * Python's quotes.
  *
  * @param {string} message
  * @returns {string}
  */
-const describeError = (message) => message.replace(/^prediction_plots\[\d+\](?: \('.*?'\))?: /, '')
+const describeError = (message) => message.replace(/^prediction_plots\[\d+\](?: \((?:'.*?'|".*?")\))?: /, '')
 
 /**
  * Lists a plot's errors.
@@ -204,7 +205,7 @@ const emitDocument = (document) => emit('update:document', document)
  */
 async function confirmRemoving(index) {
   const isConfirmed = await props.confirm({
-    header: `Remove the feature plot ${plots.value[index]?.name ?? ''}?`,
+    header: `Remove the feature plot ${plots.value[index]?.name || '(unnamed)'}?`,
     message: 'It goes from the file; the features it plots stay.',
     severity: 'warning',
     acceptLabel: 'Remove',
