@@ -193,8 +193,8 @@ const getValue = (name) => variables.find((variable) => variable.name === name)?
 **Parameters at their model values.** A parameter the protocol sets to its value in the model, as a plain number, in
 every experiment and sub-experiment (within rounding, a relative 1e-9) has no lane until asked for: a line below the
 others counts them, with a button to show and hide them. The document keeps them. The model's values come from
-`getValue`, else `variables`; a parameter whose value is unknown there, one added while the editor is open, and one an
-error or warning names are always shown.
+`getValue`, else `variables`; a parameter whose value is unknown there, one added or edited while the editor is open, and
+one an error or warning names (whole, not as the start of a longer name) are always shown.
 
 **Outputs.** Below the protocol, the editor lists its outputs (`ProtocolOutputsEditor`): each with its variable, its
 operation and range, its sub-experiment and its experiments, CA's errors under it, and validation data labelled and

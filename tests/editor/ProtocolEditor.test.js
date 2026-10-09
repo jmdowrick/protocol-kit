@@ -7,7 +7,7 @@ import ConfirmationService from 'primevue/confirmationservice'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { EXPERIMENT_PALETTE } from '../../src/core/experimentColours.js'
-import { ProtocolEditor, VariablePicker } from '../../src/editor/index.js'
+import { ProtocolCellEditor, ProtocolEditor, VariablePicker } from '../../src/editor/index.js'
 
 const RESOURCES = join(__dirname, '../resources')
 const readFixture = (fileName) => JSON.parse(readFileSync(join(RESOURCES, fileName), 'utf8'))
@@ -282,6 +282,29 @@ describe('ProtocolEditor, parameters at their model values', () => {
     expect(wrapper.find('.messages').text()).toContain('global_parameters/T[0]: 1 sub value(s), expected 2')
     expect(laneNames()).toEqual(['membrane/V_clamp', 'parameters/g_K', 'global_parameters/T'])
     expect(wrapper.find('.collapsed-note span').text()).toBe('1 parameter at its model value')
+  })
+
+  it('keeps one edited back to its model value shown', async () => {
+    const document = atModelValues()
+    document.protocol_info.params_to_change['parameters/g_Na'] = [[0.12, 0.2]]
+    mountEditor(document)
+    expect(laneNames()).toEqual(['parameters/g_Na', 'membrane/V_clamp'])
+    await wrapper.find('[aria-label="Change how parameters/g_Na varies in sub-experiment 2"]').trigger('click')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await flushPromises()
+    wrapper.findComponent(ProtocolCellEditor).vm.$emit('apply', { value: 0.12 })
+    await flushPromises()
+    const [edited] = emittedDocuments()
+    expect(edited.protocol_info.params_to_change['parameters/g_Na']).toEqual([[0.12, 0.12]])
+    await wrapper.setProps({ document: edited })
+    expect(laneNames()).toEqual(['parameters/g_Na', 'membrane/V_clamp'])
+    expect(wrapper.find('.collapsed-note span').text()).toBe('2 parameters at their model values')
+  })
+
+  it('reads a message as naming a parameter only by its whole name', () => {
+    mountEditor(atModelValues(), { warn: () => ['parameters/g_Ks is ignored here.', 'See (global_parameters/T).'] })
+    expect(laneNames()).toEqual(['membrane/V_clamp', 'global_parameters/T'])
+    expect(wrapper.find('.collapsed-note span').text()).toBe('2 parameters at their model values')
   })
 
   it('shows those whose model value is unknown', () => {

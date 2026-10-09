@@ -358,22 +358,43 @@ const clashingSubs = computed(
     )
 )
 
-// Parameters added while the editor is open, shown even at their model values.
-const addedParameters = ref(new Set())
+// Parameters added or edited while the editor is open, shown even at their model values.
+const touchedParameters = ref(new Set())
 const isShowingCollapsed = ref(false)
 // Parameters an error or warning names, or with a segment CA refuses, never tucked away.
 const flaggedParameters = computed(() => {
   const messages = [...validation.value.errors, ...validation.value.warnings]
   return new Set(
     view.value.controls
-      .filter(({ parameter, cells }) => messages.some((message) => message.includes(parameter)) || cells.some((row) => row.some((cell) => cell.error)))
+      .filter(({ parameter, cells }) => messages.some((message) => namesParameter(message, parameter)) || cells.some((row) => row.some((cell) => cell.error)))
       .map(({ parameter }) => parameter)
   )
 })
 // Parameters set to their model value everywhere, tucked away below the others until asked for.
 const collapsedParameters = computed(() =>
-  findParametersAtModelValues(view.value, findModelValue).filter((parameter) => !addedParameters.value.has(parameter) && !flaggedParameters.value.has(parameter))
+  findParametersAtModelValues(view.value, findModelValue).filter((parameter) => !touchedParameters.value.has(parameter) && !flaggedParameters.value.has(parameter))
 )
+
+/**
+ * Whether a message names a parameter whole, not as the start of a longer name (`soma/g_K` in `soma/g_Kr`).
+ *
+ * @param {string} message
+ * @param {string} parameter
+ * @returns {boolean}
+ */
+function namesParameter(message, parameter) {
+  const escaped = parameter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`(^|[^\\w/])${escaped}(?![\\w/])`).test(message)
+}
+
+/**
+ * Keeps a parameter shown for the rest of the session, so it never tucks away while being worked on.
+ *
+ * @param {string} parameter
+ */
+function touchParameter(parameter) {
+  touchedParameters.value = new Set([...touchedParameters.value, parameter])
+}
 const shownControls = computed(() => {
   if (isShowingCollapsed.value) return view.value.controls
   const collapsed = new Set(collapsedParameters.value)
@@ -709,7 +730,7 @@ async function startAddingParameter() {
  */
 function addPicked(variable) {
   isAddingParameter.value = false
-  addedParameters.value = new Set([...addedParameters.value, variable.name])
+  touchParameter(variable.name)
   edit(addParameter, variable.name, findModelValue(variable.name) ?? 0)
 }
 
@@ -791,6 +812,7 @@ function openCell(anchor, parameter, cell, sub, kind = null) {
  */
 function applyCell({ value, shape, trace, traceName }) {
   const { parameter, sub } = editing.value
+  touchParameter(parameter)
   const where = { parameter, experiment: current.value, sub }
   if (shape || trace) edit(setInput, { ...where, shape, trace })
   else edit(setValue, { ...where, value: traceName ?? value })
@@ -800,6 +822,7 @@ function applyCell({ value, shape, trace, traceName }) {
 /** Starts the edited input with its sub-experiment rather than with the warm-up. */
 function alignCell() {
   const { parameter, cell } = editing.value
+  touchParameter(parameter)
   edit(alignWithWarmUp, { parameter, experiment: current.value, ...(cell.kind === 'shape' ? { shape: cell.shape } : { trace: cell.trace }) })
   cellPopover.value.hide()
 }

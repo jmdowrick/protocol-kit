@@ -5,7 +5,7 @@
 - The editor tucks away the parameters a protocol sets to their value in the model, as a plain number, in every
   experiment and sub-experiment (`findParametersAtModelValues`, from the host's `getValue`, else `variables`). A line
   below the others counts them and shows or hides them; the document keeps them. One whose model value is unknown, one
-  added while the editor is open, and one an error or warning names stay shown.
+  added or edited while the editor is open, and one an error or warning names stay shown.
 - `readPredictionItem` checks a prediction item's held-out `std` as circulatory_autogen #536's head (7e9fdb55) does
   (`_held_out_std`): finite and above 0, one number for a constant, one or one per point for a series, which it
   expands. The prediction vectors now come from that commit, which PhLynx's exported scripts install.
