@@ -4,6 +4,8 @@
  */
 export * from './core/experimentColours.js'
 export * from './core/obsDataDocument.js'
+export * from './core/predictionItems.js'
+export * from './core/predictionValidation.js'
 export * from './core/protocolCompatibility.js'
 export * from './core/protocolEditing.js'
 export * from './core/protocolModel.js'
