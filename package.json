@@ -1,0 +1,69 @@
+{
+  "name": "@physiomelinks/protocol-kit",
+  "description": "Experiment protocols for PhLynx and CUFLynx: read, check, edit and preview the protocol_info of a circulatory_autogen obs_data.json.",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/physiomelinks/protocol-kit.git"
+  },
+  "contributors": [
+    {
+      "name": "Jarrah Dowrick"
+    }
+  ],
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js"
+    },
+    "./editor": {
+      "import": "./dist/editor.js"
+    },
+    "./editor.css": "./dist/editor.css",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "papaparse": "^5.5",
+    "primevue": "^4",
+    "vue": "^3.5"
+  },
+  "peerDependenciesMeta": {
+    "papaparse": {
+      "optional": true
+    },
+    "primevue": {
+      "optional": true
+    },
+    "vue": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@primevue/themes": "4",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "@vue/test-utils": "^2.4.6",
+    "happy-dom": "^20.6.1",
+    "papaparse": "^5.5.3",
+    "primevue": "4",
+    "vite": "^7.1.7",
+    "vitest": "^4.0.18",
+    "vue": "^3.5.22"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "yarn@4.12.0"
+}

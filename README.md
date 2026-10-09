@@ -26,6 +26,19 @@ check that the shape expansion and validation here match it.
 It does not run simulations. Each app runs protocols with its own engine: CUFLynx through circulatory_autogen and
 Myokit, PhLynx through libOpenCOR.
 
+### How it reads obs_data
+
+It follows circulatory_autogen's semantics for `obs_data.json`, so a file means the same in PhLynx, CUFLynx and CA:
+
+- `protocol_info` configures the simulations and their perturbations: experiments (`pre_times`, `sim_times`, one row
+  of sub-experiments each), the values parameters take in each sub-experiment (`params_to_change`), and the shapes and
+  traces inputs follow over time (`protocol_shapes`, `protocol_traces`).
+- `data_items` and `prediction_items` refer to an experiment by its place (`experiment_idx`, 0 when left out) and to a
+  sub-experiment by its place in it (`subexperiment_idx`). A data item without one is in the first sub-experiment; a
+  prediction item without one records over its experiment's last, as circulatory_autogen #536 reads it.
+- Edits renumber both kinds of item when experiments or sub-experiments move or go, so none points at the wrong one.
+- Keys it doesn't know are kept, wherever they are.
+
 ## Getting started (contributors)
 
 You need Node.js 22 or later, and Yarn 4 through Corepack.
@@ -76,13 +89,55 @@ const { errors, warnings, protocolInfo: valid } = validateProtocolInfo(protocolI
 const view = valid && readProtocolInfo(valid) // experiments, sub-experiments and inputs
 ```
 
-The editor's props and the CSS variables it uses will be documented here with the first release.
+### Core API
 
-## Golden vectors
+Every function takes and gives plain JSON-like values; edits never change the document given.
+
+| Module | What it does | Main exports |
+| --- | --- | --- |
+| `obsDataDocument` | Reads and writes obs_data, and finds it among an archive's files as CUFLynx does. | `parseObsData`, `readObsDataParts`, `serialiseObsData`, `findObsDataExtra`, `buildObsDataLocation` |
+| `protocolValidation` | Checks `protocol_info` as CA does, with its messages, then for what running it needs. | `validateProtocolInfo`, `readAsCircAutogen`, `checkParamsToChange`, `PROTOCOL_INFO_KEYS` |
+| `protocolModel` | Reads a valid `protocol_info` as experiments of sub-experiments, and each parameter's input in each. | `readProtocolInfo`, `readShapeForm`, `buildShapeFromForm`, `nameExperiment`, `changesDuringWarmUp` |
+| `protocolShapes` | Expands pacing and ramp shapes into traces, as CA's `protocol_shapes.py`. | `normaliseShape`, `expandShape`, `materialiseShapes`, `validateTraceReferences`, `ProtocolShapeError` |
+| `protocolEditing` | Edits a document's protocol, renumbering its data and prediction items. | `addExperiment`, `addEmptyExperiment`, `removeExperiment`, `moveExperiment`, `addSubExperiment`, `removeSubExperiment`, `setTiming`, `addParameter`, `removeParameter`, `setValue`, `setInput`, `alignWithWarmUp`, `findObservationsAt`, `ensureProtocol` |
+| `protocolPreview` | Samples an input over time for drawing. | `interpolateTrace`, `sampleInput`, `findValueRange`, `writePolylinePoints` |
+| `protocolCompatibility` | Lists what CA, and so CUFLynx, can't run of a protocol. | `findCircAutogenLimits` |
+| `protocolNames` | Finds the variable a parameter names, as CA's name resolver does. | `findNameCandidates`, `resolveParameterName` |
+| `experimentColours` | Colours experiments as `experiment_colors` names them, or from a palette by place. | `resolveExperimentColour`, `EXPERIMENT_PALETTE`, `MATPLOTLIB_COLOURS` |
+| `pythonFormat` | Formats values as Python does, for CA's messages. | `formatPythonG`, `formatPythonRepr`, ... |
+
+```js
+import { parseObsData, removeSubExperiment, serialiseObsData } from '@physiomelinks/protocol-kit'
+
+const { document } = parseObsData(text)
+const edited = removeSubExperiment(document, 0, 1) // items in it go; later ones move down
+const bytes = serialiseObsData(edited) // an ArrayBuffer, indented with 2 spaces
+```
+
+### Mounting the editor
+
+```js
+import { ProtocolEditor } from '@physiomelinks/protocol-kit/editor'
+import '@physiomelinks/protocol-kit/editor.css'
+```
+
+The editor is a `v-model` on an obs_data document (`document` prop, `update:document` event). The host supplies its
+model's variables, a way to read a variable's value, a confirm dialog and a colour palette. Its props and the CSS
+variables it uses are documented here with the first release.
+
+## Fixtures and golden vectors
+
+`tests/resources/` holds obs_data files from circulatory_autogen and CUFLynx (`br-1977` with shapes and `engine/pace`,
+`SN_simple` with traces, `NKE_pump`, and others), and `prediction_items_536_obs_data.json`, prediction items as CA #536
+reads them (`operation`, `operation_kwargs`, `subexperiment_idx`, held-out values). The round-trip tests check that
+loading and saving each without edits gives the same document, byte for byte when it is written as `serialiseObsData`
+writes it (JSON indented with 2 spaces), and that every edit leaves what it doesn't own untouched. Numbers are
+written as JavaScript writes them, so a file written by Python (`1.0`, `-0.0`, `1e-05`) comes back with the same
+values but not the same bytes.
 
 `scripts/generate_ca_vectors.py` runs circulatory_autogen's own shape expansion and validation and rewrites
-`tests/resources/ca-vectors.json`. Run it when circulatory_autogen changes its protocol semantics, then fix whatever the
-tests show:
+`tests/resources/ca-vectors.json`, for the shape cases in it and every `*_obs_data.json` fixture. It needs no packages.
+Run it when circulatory_autogen changes its protocol semantics, or a fixture is added, then fix whatever the tests show:
 
 ```sh
 python scripts/generate_ca_vectors.py /path/to/circulatory_autogen
