@@ -16,7 +16,8 @@
   as it is, as writing one item per experiment dropped the rest, and the editor won't edit it.
 - The editor: clicking the Variable caption no longer clears the variable; an error all of an output's items have
   shows once; parameters are always offered, for their mean; a range field that reads as no number is refused.
-  `NumberInput` emits `invalid`.
+  `NumberInput` emits `invalid`. The Sub-experiment field shows "The last of each experiment" when chosen, not blank,
+  and a new output's form shows no problem until it has a variable or a name.
 
 ## 0.2.0 (2026-10-09)
 

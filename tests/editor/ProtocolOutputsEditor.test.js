@@ -184,6 +184,20 @@ describe('ProtocolOutputsEditor', () => {
     expect(emittedDocuments()[0].prediction_items.map((item) => [item.data_item_name, item.experiment_idx, item.subexperiment_idx])).toEqual([['i_Na', 0, 1]])
   })
 
+  it('shows the last sub-experiment as chosen, and no problem until the form is touched', async () => {
+    mountOutputs(readFixture('br-1977_obs_data.json'))
+    await wrapper.find('.add-output-button').trigger('click')
+    expect(wrapper.findAllComponents(Select).at(-1).find('.p-select-label').text()).toBe('The last of each experiment')
+    expect(wrapper.findAll('form .p-message')).toHaveLength(0)
+    expect(wrapper.find('form button[type="submit"]').attributes('disabled')).toBeDefined()
+    await wrapper.find('input[aria-label="Output name"]').setValue('V')
+    expect(wrapper.findAll('form .p-message').map((found) => found.text())).toEqual(['Choose a variable to record.'])
+    await fillForm({ variable: VARIABLES[0], sub: 0 })
+    await fillForm({ sub: 'last' })
+    await wrapper.find('form').trigger('submit')
+    expect(emittedDocuments()[0].prediction_items.at(-1).subexperiment_idx).toBeUndefined()
+  })
+
   it('edits an output, its items keeping their names', async () => {
     mountOutputs(readFixture('prediction_items_536_obs_data.json'))
     await wrapper.find('button[aria-label="Edit output I_peak"]').trigger('click')

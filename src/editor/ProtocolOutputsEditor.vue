@@ -101,7 +101,15 @@
         </label>
         <label class="form-field">
           Sub-experiment
-          <Select v-model="draft.subexperiment" :options="subOptions" option-label="label" option-value="value" size="small" aria-label="Sub-experiment" />
+          <Select
+            :model-value="draft.subexperiment ?? LAST_SUB"
+            :options="subOptions"
+            option-label="label"
+            option-value="value"
+            size="small"
+            aria-label="Sub-experiment"
+            @update:model-value="(value) => (draft.subexperiment = value === LAST_SUB ? null : value)"
+          />
         </label>
       </div>
 
@@ -114,7 +122,7 @@
         </label>
       </fieldset>
 
-      <Message v-for="message in draftProblems" :key="message" severity="error" size="small">{{ message }}</Message>
+      <Message v-for="message in shownProblems" :key="message" severity="error" size="small">{{ message }}</Message>
 
       <div class="form-actions">
         <Button label="Cancel" text size="small" severity="secondary" @click="draft = null" />
@@ -153,6 +161,8 @@ const KINDS = [
   { value: 'trace', label: 'Trace' },
   { value: 'feature', label: 'Feature' },
 ]
+// The Select's value for the last sub-experiment, which the draft holds as null: a Select shows null as nothing chosen.
+const LAST_SUB = 'last'
 
 // PrimeVue's tooltips, whether or not the host registers them.
 const vTooltip = Tooltip
@@ -308,7 +318,7 @@ const operationOptions = computed(() => {
 
 // Each experiment's last, or one of the places any experiment has, from 1.
 const subOptions = computed(() => [
-  { value: null, label: 'The last of each experiment' },
+  { value: LAST_SUB, label: 'The last of each experiment' },
   ...Array.from({ length: Math.max(0, ...simTimes.value.map((subs) => (Array.isArray(subs) ? subs.length : 0))) }, (_, sub) => ({ value: sub, label: `Sub-experiment ${sub + 1}` })),
 ])
 
@@ -390,6 +400,9 @@ const draftProblems = computed(() => {
   // The errors the draft brings, each once for all its items.
   return [...new Set([...itemErrors.flat(), ...errors].filter((message) => !before.has(message)).map(describeItemError))]
 })
+
+// The problems shown: none for a new output until it has a variable or a name, the button saying it is not ready.
+const shownProblems = computed(() => (draft.value?.variable || draft.value?.isNameTyped ? draftProblems.value : []))
 
 /** Applies the draft, and closes the form. */
 function applyDraft() {
