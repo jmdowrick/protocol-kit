@@ -115,6 +115,34 @@ function checkValueShape(where, { data_type: dataType, value, std, obs_dt: obsDt
 }
 
 /**
+ * Checks an item's held-out std as a data item's: one finite positive number for a constant; for a series, one such
+ * number, for every point, or one per point. Ported from CA's _held_out_std.
+ *
+ * @param {string} where - How CA names the item.
+ * @param {Object} entry - With a value and a std, its shape checked.
+ * @returns {{error: string|null, std: number|number[]|null}} CA's error, or the std as CA reads it: a number for a
+ *   constant, one per point for a series.
+ */
+function readHeldOutStd(where, { data_type: dataType, value, std }) {
+  let stds
+  if (dataType === 'constant') {
+    if (Array.isArray(std)) return { error: `${where}: a constant's 'std' is one number, got a list.`, std: null }
+    stds = [Number(std)]
+  } else {
+    const points = Array.isArray(value) ? value.flat(Infinity).length : 1
+    stds = (Array.isArray(std) ? std.flat(Infinity) : [std]).map(Number)
+    if (stds.length === 1) stds = Array(points).fill(stds[0])
+    else if (stds.length !== points) {
+      return { error: `${where}: 'std' has ${stds.length} entries but the series has ${points} points; give one number or one per point.`, std: null }
+    }
+  }
+  if (!stds.every((entry) => Number.isFinite(entry) && entry > 0)) {
+    return { error: `${where}: every 'std' entry must be finite and > 0, got ${formatPythonRepr(std)}.`, std: null }
+  }
+  return { error: null, std: dataType === 'constant' ? stds[0] : stds }
+}
+
+/**
  * Reads one prediction item as CA does: legacy keys migrated, the schema checked and defaults filled in, then its
  * experiment and sub-experiment, its data and its operation.
  *
@@ -168,6 +196,11 @@ export function readPredictionItem(rawEntry, index, simTimes) {
   }
   const shapeError = checkValueShape(where, entry)
   if (shapeError) return { error: shapeError, entry: null }
+  if (entry.value != null && entry.std != null) {
+    const { error, std } = readHeldOutStd(where, entry)
+    if (error) return { error, entry: null }
+    entry.std = std
+  }
   const operation = readOperation(entry.operation)
   const kwargs = entry.operation_kwargs ?? {}
   if (Object.keys(kwargs).length && operation == null) {

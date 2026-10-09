@@ -236,7 +236,8 @@ python scripts/generate_ca_vectors.py /path/to/circulatory_autogen
 
 `scripts/generate_prediction_vectors.py` does the same for prediction items, with #536's own parser: it rewrites
 `tests/resources/prediction-vectors.json`, for its good and bad cases and every fixture with prediction items. It
-needs a Python with that circulatory_autogen's libcuflynx installed:
+needs a Python with that circulatory_autogen's libcuflynx installed. The vectors record the commit they come from:
+#536's head (`refs/pull/536/head`), which PhLynx's exported scripts install too, so the editor and the script agree.
 
 ```sh
 /path/to/venv/bin/python scripts/generate_prediction_vectors.py /path/to/circulatory_autogen
