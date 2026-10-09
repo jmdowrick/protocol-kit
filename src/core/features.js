@@ -21,17 +21,23 @@ function readOperand(segment, operand) {
 }
 
 /**
- * Whether an operation's range takes no samples, its fractions being numbers: a mean over none is NaN, where a maximum
- * or minimum raises.
+ * Whether an operation's range takes no samples: a mean over none is NaN, where a maximum or minimum raises.
  *
  * @param {string} operation
  * @param {ArrayLike<number>} values
  * @param {Object} kwargs
+ * @param {Map<string, number>} computed - The features before it, by name, which a fraction may name.
  * @returns {boolean}
  */
-function isEmptyRange(operation, values, kwargs) {
-  if (!isRangeOperation(operation) || !Object.values(kwargs ?? {}).every((value) => typeof value === 'number')) return false
-  return sliceRange(values, kwargs).length === 0
+function isEmptyRange(operation, values, kwargs, computed) {
+  if (!isRangeOperation(operation)) return false
+  const resolved = Object.fromEntries(Object.entries(kwargs ?? {}).map(([key, value]) => [key, computed.has(value) ? computed.get(value) : value]))
+  try {
+    return sliceRange(values, resolved).length === 0
+  } catch (error) {
+    if (error instanceof OperationError) return false
+    throw error
+  }
 }
 
 /**
@@ -92,8 +98,8 @@ export function computeFeatures(document, segmentsByExperiment) {
       feature.error = error.message
       return
     }
+    if (Number.isNaN(feature.value) && isEmptyRange(feature.operation, operands[0], entry.operation_kwargs, computed)) feature.error = 'Its range takes no samples.'
     computed.set(name, feature.value)
-    if (Number.isNaN(feature.value) && isEmptyRange(feature.operation, operands[0], entry.operation_kwargs)) feature.error = 'Its range takes no samples.'
   })
   return features
 }

@@ -80,17 +80,58 @@ const computeMax = (values) => reduceExtreme(values, true)
 const computeMin = (values) => reduceExtreme(values, false)
 const computeMaxMinusMin = (values) => computeMax(values) - computeMin(values)
 
+// Python's int() of a string in base 10: digits of any script, single underscores between them, a sign, and
+// whitespace around.
+const PYTHON_INT = /^\s*([+-]?)(\p{Nd}+(?:_\p{Nd}+)*)\s*$/u
+const DIGIT = /\p{Nd}/u
+
 /**
- * Reads a fraction as Python's `int(fraction * (n - 1))`: truncated towards 0, a bool as 0 or 1.
+ * Reads a digit of any script as its value: Unicode places each script's 0 to 9 in a run of their own.
+ *
+ * @param {string} digit
+ * @returns {number}
+ */
+function readDigit(digit) {
+  const code = digit.codePointAt(0)
+  let before = 0
+  while (DIGIT.test(String.fromCodePoint(code - before - 1))) before++
+  return before % 10
+}
+
+/**
+ * Reads a string fraction as Python's `int(fraction * (n - 1))` does: the string repeated n - 1 times, then read as
+ * an integer. Only digits survive the repeating: '0' gives 0, another the whole run's digits, past any end.
+ *
+ * @param {string} fraction
+ * @param {number} last - n - 1.
+ * @returns {number} ±Infinity for one past 15 digits, which a slice stops at the end anyway.
+ * @throws {OperationError} With int()'s ValueError, its literal cut to 200 characters as CPython does.
+ */
+function readStringIndex(fraction, last) {
+  const repeated = fraction.repeat(Math.max(last, 0))
+  const match = PYTHON_INT.exec(repeated)
+  if (!match) {
+    const shown = fraction.repeat(Math.max(0, Math.min(last, Math.ceil(201 / Math.max(fraction.length, 1)))))
+    throw new OperationError(`invalid literal for int() with base 10: ${formatPythonRepr(shown).slice(0, 200)}`)
+  }
+  const digits = Array.from(match[2].replaceAll('_', ''), readDigit).join('').replace(/^0+/, '')
+  const sign = match[1] === '-' ? -1 : 1
+  return digits.length > 15 ? sign * Infinity : sign * Number(digits || 0)
+}
+
+/**
+ * Reads a fraction as Python's `int(fraction * (n - 1))`: truncated towards 0, a bool as 0 or 1, and a string
+ * repeated, as Python multiplies one (readStringIndex).
  *
  * @param {*} fraction
  * @param {number} last - n - 1.
  * @returns {number}
- * @throws {OperationError} For a fraction that isn't a finite number, as int() raises.
+ * @throws {OperationError} For a fraction that isn't a finite number or such a string, as int() raises.
  */
 function readIndex(fraction, last) {
+  if (typeof fraction === 'string') return readStringIndex(fraction, last)
   if (typeof fraction !== 'number' && typeof fraction !== 'boolean') {
-    throw new OperationError(`The range's fraction must be a number, got ${formatPythonRepr(fraction)}.`, fraction == null ? 'TypeError' : 'ValueError')
+    throw new OperationError(`The range's fraction must be a number, got ${formatPythonRepr(fraction ?? null)}.`, 'TypeError')
   }
   const product = Number(fraction) * last
   if (!Number.isFinite(product)) throw new OperationError(`cannot convert float ${Number.isNaN(product) ? 'NaN' : 'infinity'} to integer`)

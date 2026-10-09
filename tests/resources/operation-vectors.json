@@ -3687,11 +3687,27 @@
   {"series": "normal x100", "operation": "max", "operation_kwargs": {"x": 1}, "error": "ValueError"},
   {"series": "normal x100", "operation": "max", "operation_kwargs": {"start_frac": "a"}, "error": "ValueError"},
   {"series": "normal x100", "operation": "max", "operation_kwargs": {"start_frac": null}, "error": "ValueError"},
+  {"series": "normal x100", "operation": "max", "operation_kwargs": {"start_frac": [0]}, "error": "ValueError"},
+  {"series": "normal x100", "operation": "max", "operation_kwargs": {"start_frac": "0"}, "error": "ValueError"},
+  {"series": "normal x100", "operation": "max", "operation_kwargs": {"start_frac": "00", "end_frac": "1"}, "error": "ValueError"},
+  {"series": "normal x100", "operation": "max", "operation_kwargs": {"start_frac": "0", "end_frac": "2_0"}, "error": "ValueError"},
+  {"series": "normal x100", "operation": "max", "operation_kwargs": {"start_frac": "-1"}, "error": "ValueError"},
+  {"series": "normal x100", "operation": "max", "operation_kwargs": {"start_frac": " 0 "}, "error": "ValueError"},
+  {"series": "normal x100", "operation": "max", "operation_kwargs": {"start_frac": "0.5"}, "error": "ValueError"},
+  {"series": "normal x100", "operation": "max", "operation_kwargs": {"start_frac": ""}, "error": "ValueError"},
   {"series": "normal x100", "operation": "mean_in_range", "operation_kwargs": {"start": 0.1}, "error": "ValueError"},
   {"series": "normal x100", "operation": "mean_in_range", "operation_kwargs": {"series_output": true}, "error": "ValueError"},
   {"series": "normal x100", "operation": "mean_in_range", "operation_kwargs": {"x": 1}, "error": "ValueError"},
   {"series": "normal x100", "operation": "mean_in_range", "operation_kwargs": {"start_frac": "a"}, "error": "ValueError"},
-  {"series": "normal x100", "operation": "mean_in_range", "operation_kwargs": {"start_frac": null}, "error": "TypeError"}
+  {"series": "normal x100", "operation": "mean_in_range", "operation_kwargs": {"start_frac": null}, "error": "TypeError"},
+  {"series": "normal x100", "operation": "mean_in_range", "operation_kwargs": {"start_frac": [0]}, "error": "TypeError"},
+  {"series": "normal x100", "operation": "mean_in_range", "operation_kwargs": {"start_frac": "0"}, "value": -0.04020411390177482},
+  {"series": "normal x100", "operation": "mean_in_range", "operation_kwargs": {"start_frac": "00", "end_frac": "1"}, "value": -0.049290606258003},
+  {"series": "normal x100", "operation": "mean_in_range", "operation_kwargs": {"start_frac": "0", "end_frac": "2_0"}, "value": -0.049290606258003},
+  {"series": "normal x100", "operation": "mean_in_range", "operation_kwargs": {"start_frac": "-1"}, "error": "ValueError"},
+  {"series": "normal x100", "operation": "mean_in_range", "operation_kwargs": {"start_frac": " 0 "}, "error": "ValueError"},
+  {"series": "normal x100", "operation": "mean_in_range", "operation_kwargs": {"start_frac": "0.5"}, "error": "ValueError"},
+  {"series": "normal x100", "operation": "mean_in_range", "operation_kwargs": {"start_frac": ""}, "error": "ValueError"}
  ],
  "features": {
   "document": {

@@ -36,8 +36,10 @@ LENGTHS = [1, 2, 3, 7, 8, 9, 15, 16, 17, 63, 100, 127, 128, 129, 130, 136, 255, 
 WINDOWS = [None, {"start_frac": 0, "end_frac": 0.2}, {"start_frac": 0.5, "end_frac": 1}, {"start_frac": 0.1, "end_frac": 0.9},
            {"start_frac": 0.333, "end_frac": 0.667}, {"start_frac": 0, "end_frac": 0.001}, {"start_frac": 0.8, "end_frac": 0.2},
            {"start_frac": -0.5, "end_frac": 1}, {"start_frac": 0, "end_frac": 1.5}, {"start_frac": 1, "end_frac": 0}, {"start_frac": True, "end_frac": 1}]
-# operation_kwargs CA refuses, or can't use.
-BAD_KWARGS = [{"start": 0.1}, {"series_output": True}, {"x": 1}, {"start_frac": "a"}, {"start_frac": None}]
+# operation_kwargs CA refuses, or can't use, and strings, which Python repeats n - 1 times and then reads as an integer.
+BAD_KWARGS = [{"start": 0.1}, {"series_output": True}, {"x": 1}, {"start_frac": "a"}, {"start_frac": None}, {"start_frac": [0]},
+              {"start_frac": "0"}, {"start_frac": "00", "end_frac": "1"}, {"start_frac": "0", "end_frac": "2_0"}, {"start_frac": "-1"},
+              {"start_frac": " 0 "}, {"start_frac": "0.5"}, {"start_frac": ""}]
 
 
 def encode_series(values):

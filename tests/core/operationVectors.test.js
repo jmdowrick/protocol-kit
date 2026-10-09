@@ -79,6 +79,16 @@ describe('sliceRange', () => {
     expect(sliceRange(values, { start_frac: 0.5, end_frac: 2 })).toEqual([5, 6, 7, 8, 9, 10])
     expect(sliceRange(values, { start_frac: 0.8, end_frac: 0.2 })).toEqual([])
   })
+
+  it('repeats a string fraction n - 1 times and reads it as an integer, as Python does', () => {
+    const values = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    expect(sliceRange(values, { start_frac: '0', end_frac: 1 })).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+    expect(sliceRange(values, { start_frac: '٠', end_frac: '1' })).toEqual(values)
+    expect(sliceRange([0, 1], { start_frac: '+1', end_frac: 1 })).toEqual([])
+    expect(() => sliceRange([0], { start_frac: '0' })).toThrow("invalid literal for int() with base 10: ''")
+    const long = Array.from({ length: 501 }, (_, index) => index)
+    expect(() => sliceRange(long, { start_frac: 'a' })).toThrow(new RegExp(`base 10: 'a{199}$`))
+  })
 })
 
 describe('applyOperation', () => {

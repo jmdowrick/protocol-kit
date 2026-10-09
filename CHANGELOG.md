@@ -6,9 +6,10 @@
   operation that gives one number, over its own sub-experiment's samples (the first included, as CA records them),
   in the order of prediction_items, an operation_kwargs value naming an earlier feature taking its value. `max`,
   `min`, `mean`, `max_minus_min` and their `*_in_range` forms are ported from CA's funcs (`applyOperation`): Python's
-  slicing, numpy's NaNs and errors, and means summed in numpy's pairwise order (`sumPairwise`), so each value is CA's
-  to the bit. Golden vectors from CA's own funcs and features_from_segments
-  (`scripts/generate_operation_vectors.py`, `tests/resources/operation-vectors.json`) check it.
+  slicing (a string fraction repeated n - 1 times and read as an integer, as Python multiplies one), numpy's NaNs and
+  errors, and means summed in numpy's pairwise order (`sumPairwise`), so each value is CA's to the bit. Golden vectors
+  from CA's own funcs and features_from_segments (`scripts/generate_operation_vectors.py`,
+  `tests/resources/operation-vectors.json`) check it.
 - Feature plots: an obs_data's top-level `prediction_plots`, as proposed to circulatory_autogen, each a group of
   features (`item_name_for_plotting`) across experiments against another group or an input's value in a
   sub-experiment, optionally a line per value of an input.
