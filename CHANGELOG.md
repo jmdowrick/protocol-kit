@@ -10,8 +10,8 @@
   to the bit. Golden vectors from CA's own funcs and features_from_segments
   (`scripts/generate_operation_vectors.py`, `tests/resources/operation-vectors.json`) check it.
 - Feature plots: an obs_data's top-level `prediction_plots`, as proposed to circulatory_autogen, each a group of
-  features (`item_name_for_plotting`) across experiments against another group, an input's value in a sub-experiment,
-  or the experiment (`feature_vs_experiment`, beyond the proposal), optionally a line per value of an input.
+  features (`item_name_for_plotting`) across experiments against another group or an input's value in a
+  sub-experiment, optionally a line per value of an input.
   `addPredictionPlot`, `updatePredictionPlot`, `removePredictionPlot`, `validatePredictionPlots` (the proposal's
   checks), `listFeatureGroups`, and `computePlotSeries`, which pairs computed features into each plot's points.
 - Removing a sub-experiment keeps each plot reading its input in the same sub-experiment, or removes a plot that

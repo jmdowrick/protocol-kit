@@ -173,7 +173,7 @@ import { addPredictionPlot, computeFeatures, computePlotSeries, validatePredicti
 const features = computeFeatures(document, segments) // [{ name, group, experiment, subexperiment, value, unit, error }]
 const edited = addPredictionPlot(document, {
   name: 'Peak I_Na vs step potential',
-  kind: 'feature_vs_input', // or 'feature_vs_feature' (x a group), 'feature_vs_experiment' (no x)
+  kind: 'feature_vs_input', // or 'feature_vs_feature' (x a group)
   x: { params_to_change: 'clamp/V_cmd', subexperiment_idx: 1 },
   y: 'I_peak', // a group: the items' item_name_for_plotting
   series: null, // or an input like x: a line per value
@@ -189,8 +189,8 @@ number or one sample, as libcuflynx's Myokit helper records it. A feature CA can
 with no samples, say) is NaN with the error; a mean over none is NaN, as numpy's.
 
 A plot pairs, for each experiment its `y` group has an item in, that item's feature with the `x` group's in the same
-experiment (`feature_vs_feature`), the number `params_to_change[key][experiment][subexperiment_idx]`
-(`feature_vs_input`), or the experiment's number from 1 (`feature_vs_experiment`, which the proposal leaves open).
+experiment (`feature_vs_feature`), or the number `params_to_change[key][experiment][subexperiment_idx]`
+(`feature_vs_input`): the proposal's two kinds, and no others.
 `validatePredictionPlots` checks what the proposal does: keys, a name of its own, the kind and its `x`, groups that
 exist, are features (an operation, not a series) and have one item per experiment, `x` and `y` over the same
 experiments, and inputs set to a number in that sub-experiment of each experiment. Removing a sub-experiment moves an

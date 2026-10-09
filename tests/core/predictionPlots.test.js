@@ -85,12 +85,12 @@ describe('listFeatureGroups', () => {
 describe('editing prediction plots', () => {
   it('adds, changes and removes plots, the list going with the last', () => {
     const { prediction_plots: _, ...bare } = DOCUMENT
-    const added = addPredictionPlot(bare, { name: 'I_peak by experiment', kind: 'feature_vs_experiment', y: 'I_peak' })
-    expect(added.prediction_plots).toEqual([{ name: 'I_peak by experiment', kind: 'feature_vs_experiment', x: null, y: 'I_peak', series: null }])
+    const added = addPredictionPlot(bare, { name: 'I_peak vs V_step', kind: 'feature_vs_feature', x: 'V_step', y: 'I_peak' })
+    expect(added.prediction_plots).toEqual([{ name: 'I_peak vs V_step', kind: 'feature_vs_feature', x: 'V_step', y: 'I_peak', series: null }])
     expect(bare.prediction_plots).toBeUndefined()
 
     const updated = updatePredictionPlot({ ...added, prediction_plots: [{ ...added.prediction_plots[0], x_note: 'kept' }] }, 0, { kind: 'feature_vs_input', x: STEP() })
-    expect(updated.prediction_plots[0]).toEqual({ name: 'I_peak by experiment', kind: 'feature_vs_input', x: STEP(), y: 'I_peak', series: null, x_note: 'kept' })
+    expect(updated.prediction_plots[0]).toEqual({ name: 'I_peak vs V_step', kind: 'feature_vs_input', x: STEP(), y: 'I_peak', series: null, x_note: 'kept' })
     expect(updatePredictionPlot(added, 3, { name: 'none' })).toBe(added)
 
     expect(Object.hasOwn(removePredictionPlot(added, 0), 'prediction_plots')).toBe(false)
@@ -101,7 +101,7 @@ describe('editing prediction plots', () => {
     const text = `${JSON.stringify(DOCUMENT, null, 2)}\n`
     const { document } = parseObsData(text)
     expect(new TextDecoder().decode(serialiseObsData(document))).toBe(text)
-    expect(removePredictionPlot(addPredictionPlot(document, { name: 'extra', kind: 'feature_vs_experiment', y: 'V_step' }), 2)).toEqual(document)
+    expect(removePredictionPlot(addPredictionPlot(document, { name: 'extra', kind: 'feature_vs_feature', x: 'I_peak', y: 'V_step' }), 2)).toEqual(document)
     expect(moveExperiment(moveExperiment(document, 0, 2), 2, 0)).toEqual(document)
     expect(addSubExperiment(document, 0).prediction_plots).toEqual(document.prediction_plots)
   })
@@ -117,18 +117,19 @@ describe('validatePredictionPlots', () => {
 
   it('checks the list, its entries, their keys, names and kinds', () => {
     expect(validatePredictionPlots({ prediction_plots: {} }).errors).toEqual(["prediction_plots must be a list of dict entries, got <class 'dict'>"])
-    expect(errorsOf([3, { name: 'a', kind: 'feature_vs_experiment', x: null, y: 'I_peak', colour: 'r' }])).toEqual([
+    expect(errorsOf([3, { name: 'a', kind: 'feature_vs_feature', x: 'V_step', y: 'I_peak', colour: 'r' }])).toEqual([
       ["prediction_plots[0] must be a dict, got <class 'int'>."],
       ["Unknown keys in prediction_plots[1] ('a') not in schema: ['colour']"],
     ])
-    const plot = { kind: 'feature_vs_experiment', x: null, y: 'I_peak' }
-    expect(errorsOf([{ ...plot, name: ' ' }, { ...plot, name: 'a' }, { ...plot, name: 'a', kind: 'curve' }])).toEqual([
+    const plot = { kind: 'feature_vs_feature', x: 'V_step', y: 'I_peak' }
+    expect(errorsOf([{ ...plot, name: ' ' }, { ...plot, name: 'a' }, { ...plot, name: 'a', kind: 'curve' }, { ...plot, name: 'b', kind: 'feature_vs_experiment', x: null }])).toEqual([
       ["prediction_plots[0] (' '): It needs a name: a string, not empty."],
       [],
       [
         "prediction_plots[2] ('a'): Its name is prediction_plots[1]'s too; each plot needs its own.",
-        "prediction_plots[2] ('a'): Its kind must be 'feature_vs_feature', 'feature_vs_input' or 'feature_vs_experiment', got 'curve'.",
+        "prediction_plots[2] ('a'): Its kind must be 'feature_vs_feature' or 'feature_vs_input', got 'curve'.",
       ],
+      ["prediction_plots[3] ('b'): Its kind must be 'feature_vs_feature' or 'feature_vs_input', got 'feature_vs_experiment'."],
     ])
   })
 
@@ -140,7 +141,7 @@ describe('validatePredictionPlots', () => {
           { name: 'a', kind: 'feature_vs_feature', x: STEP(), y: 'I_peak' },
           { name: 'b', kind: 'feature_vs_feature', x: 'V_step', y: 'nothing' },
           { name: 'c', kind: 'feature_vs_feature', x: 'V_step', y: 'I_peak' },
-          { name: 'd', kind: 'feature_vs_experiment', x: 'V_step', y: 'I_peak' },
+          { name: 'd', kind: 'feature_vs_input', x: 'V_step', y: 'I_peak' },
         ],
         { prediction_items: items }
       )
@@ -162,7 +163,7 @@ describe('validatePredictionPlots', () => {
       ],
       [
         "prediction_plots[3] ('d'): y names 'I_peak', which has 2 items in experiment_idx 2 (I_peak_e2, again); a plot takes one per experiment.",
-        "prediction_plots[3] ('d'): For a feature_vs_experiment plot, x is null, got 'V_step'.",
+        "prediction_plots[3] ('d'): x must be {'params_to_change': <key>, 'subexperiment_idx': <int>}, got 'V_step'.",
       ],
     ])
     expect(errorsOf([{ name: 'a', kind: 'feature_vs_feature', x: 'V_step', y: 'I_peak' }], { prediction_items: DOCUMENT.prediction_items.slice(0, 5) })).toEqual([
@@ -258,15 +259,14 @@ describe('computePlotSeries', () => {
     ])
   })
 
-  it("numbers experiments from 1, skips what wasn't computed, and draws no invalid plot", () => {
-    const document = { ...DOCUMENT, prediction_plots: [{ name: 'by experiment', kind: 'feature_vs_experiment', x: null, y: 'I_peak', series: null }, { name: 'bad', kind: 'feature_vs_feature', x: 'none', y: 'I_peak' }] }
-    const [byExperiment, bad] = computePlotSeries(document, computeFeatures(document, SEGMENTS.slice(0, 2)))
-    expect(byExperiment.x).toEqual({ label: 'Experiment', unit: '' })
-    expect(byExperiment.points.map(({ x, y }) => [x, y])).toEqual([
-      [1, -1],
-      [2, -2],
+  it("skips what wasn't computed, and draws no invalid plot", () => {
+    const document = { ...DOCUMENT, prediction_plots: [{ name: 'by step', kind: 'feature_vs_input', x: STEP(), y: 'I_peak', series: null }, { name: 'bad', kind: 'feature_vs_feature', x: 'none', y: 'I_peak' }] }
+    const [byStep, bad] = computePlotSeries(document, computeFeatures(document, SEGMENTS.slice(0, 2)))
+    expect(byStep.points.map(({ x, y }) => [x, y])).toEqual([
+      [-40, -1],
+      [-20, -2],
     ])
-    expect(byExperiment.skipped).toEqual([{ experiment: 2, reason: "Sub-experiment 2 of experiment 3 wasn't run." }])
+    expect(byStep.skipped).toEqual([{ experiment: 2, reason: "Sub-experiment 2 of experiment 3 wasn't run." }])
     expect(bad).toMatchObject({ points: [], errors: ["prediction_plots[1] ('bad'): x names no prediction items: none has the item_name_for_plotting 'none'."] })
   })
 })

@@ -2,7 +2,7 @@
   <section class="plots-editor" aria-label="Feature plots">
     <header class="plots-head">
       <h5 class="plots-heading">Feature plots</h5>
-      <span class="plots-note">A feature across experiments, against another feature, an input or the experiment: an I–V curve, say.</span>
+      <span class="plots-note">A feature across experiments, against another feature or an input: an I–V curve, say.</span>
     </header>
 
     <Message v-for="message in checked.errors.filter((error) => !checked.plotErrors.flat().includes(error))" :key="message" severity="error" size="small">{{ message }}</Message>
@@ -91,7 +91,7 @@
 <script setup>
 /**
  * Edits an obs_data document's prediction_plots: each plots a group of features across experiments against another
- * group, an input's value in a sub-experiment, or the experiment, optionally a line per value of another input.
+ * group or an input's value in a sub-experiment, optionally a line per value of another input.
  */
 import { computed, ref, useId } from 'vue'
 
@@ -151,7 +151,7 @@ const subOptions = computed(() =>
  * @param {string} kind
  * @returns {string}
  */
-const describeKind = (kind) => ({ feature_vs_feature: 'Against a feature', feature_vs_input: 'Against an input', feature_vs_experiment: 'By experiment' })[kind] ?? String(kind ?? 'No kind')
+const describeKind = (kind) => ({ feature_vs_feature: 'Against a feature', feature_vs_input: 'Against an input' })[kind] ?? String(kind ?? 'No kind')
 
 /**
  * Words what a plot draws: its y against its x.
@@ -161,7 +161,7 @@ const describeKind = (kind) => ({ feature_vs_feature: 'Against a feature', featu
  */
 function describeAxes(plot) {
   if (!isMapping(plot)) return ''
-  const x = plot.kind === 'feature_vs_input' && isInputReference(plot.x) ? describeInputReference(plot.x) : plot.kind === 'feature_vs_experiment' ? 'the experiment' : plot.x
+  const x = plot.kind === 'feature_vs_input' && isInputReference(plot.x) ? describeInputReference(plot.x) : plot.x
   return `${plot.y} against ${x}`
 }
 
@@ -259,10 +259,8 @@ const draftX = computed(() => {
 
 // The draft's title until one is typed: y against x.
 const defaultName = computed(() => {
-  const { y, kind } = draft.value ?? {}
-  if (!y) return ''
-  if (kind === 'feature_vs_experiment') return `${y} by experiment`
-  if (!draftX.value) return ''
+  const { y } = draft.value ?? {}
+  if (!y || !draftX.value) return ''
   return `${y} vs ${typeof draftX.value === 'string' ? draftX.value : draftX.value.params_to_change}`
 })
 

@@ -1,19 +1,17 @@
 /**
  * Reads, edits and checks an obs_data document's prediction_plots, as proposed to circulatory_autogen: figures that
  * plot a feature across experiments, such as an I–V curve. Each pairs, experiment by experiment, the features of one
- * group of prediction items (an item_name_for_plotting) with another group's, an input's value in a sub-experiment,
- * or the experiment's number. Each edit gives a new document, keeping everything it doesn't touch.
+ * group of prediction items (an item_name_for_plotting) with another group's, or an input's value in a
+ * sub-experiment. Each edit gives a new document, keeping everything it doesn't touch.
  */
 import { formatPythonList, formatPythonRepr, getPythonTypeName } from './pythonFormat.js'
 import { nameItemForPlotting, readOperation } from './predictionValidation.js'
 import { isMapping } from './protocolShapes.js'
 
-// How a plot reads x: another group's features, an input's value in a sub-experiment, or the experiment's number.
-// The last goes beyond the proposal, which leaves it open.
+// How a plot reads x: another group's features, or an input's value in a sub-experiment; the proposal's two.
 export const PREDICTION_PLOT_KINDS = [
   { value: 'feature_vs_feature', label: 'A feature' },
   { value: 'feature_vs_input', label: 'An input' },
-  { value: 'feature_vs_experiment', label: 'The experiment' },
 ]
 export const PREDICTION_PLOT_KEYS = ['name', 'kind', 'x', 'y', 'series']
 // The keys of a reference to an input's value in a sub-experiment.
@@ -75,7 +73,7 @@ export function listFeatureGroups(document) {
  * @param {string} plot.kind - One of PREDICTION_PLOT_KINDS.
  * @param {string} plot.y - The group of the features it plots.
  * @param {string|{params_to_change: string, subexperiment_idx: number}|null} [plot.x] - A group for
- *   'feature_vs_feature', an input's value for 'feature_vs_input', none for 'feature_vs_experiment'.
+ *   'feature_vs_feature', an input's value for 'feature_vs_input'.
  * @param {{params_to_change: string, subexperiment_idx: number}|null} [plot.series] - An input whose values each
  *   draw a line of their own.
  * @returns {Object}
@@ -279,7 +277,7 @@ function checkPlot(plot, index, { groups, info, firsts }) {
   else if (firsts.get(plot.name) !== index) errors.push(`Its name is prediction_plots[${firsts.get(plot.name)}]'s too; each plot needs its own.`)
   const kinds = PREDICTION_PLOT_KINDS.map(({ value }) => value)
   if (!kinds.includes(plot.kind)) {
-    errors.push(`Its kind must be ${kinds.slice(0, -1).map(formatPythonRepr).join(', ')} or ${formatPythonRepr(kinds.at(-1))}, got ${formatPythonRepr(plot.kind ?? null)}.`)
+    errors.push(`Its kind must be ${kinds.map(formatPythonRepr).join(' or ')}, got ${formatPythonRepr(plot.kind ?? null)}.`)
   }
   if (typeof plot.y !== 'string' || !plot.y) errors.push(`y must name a group of features, got ${formatPythonRepr(plot.y ?? null)}.`)
   const yGroup = typeof plot.y === 'string' ? groups.get(plot.y) : null
@@ -300,8 +298,6 @@ function checkPlot(plot, index, { groups, info, firsts }) {
     }
   } else if (plot.kind === 'feature_vs_input') {
     errors.push(...checkInputReference('x', plot.x, info, experiments))
-  } else if (plot.kind === 'feature_vs_experiment' && plot.x != null) {
-    errors.push(`For a feature_vs_experiment plot, x is null, got ${formatPythonRepr(plot.x)}.`)
   }
   if (plot.series != null) errors.push(...checkInputReference('series', plot.series, info, experiments))
   return errors.map((error) => `${where}: ${error}`)
@@ -352,8 +348,7 @@ export const describeInputReference = ({ params_to_change: key, subexperiment_id
 
 /**
  * Pairs a run's features into the points of each prediction plot, ready to draw: one per experiment of its y, whose x
- * is the x group's feature in that experiment, the input's value, or the experiment's number (from 1), sorted by
- * series, then x.
+ * is the x group's feature in that experiment or the input's value, sorted by series, then x.
  *
  * @param {Object} document
  * @param {Array<Object>} features - From computeFeatures.
@@ -389,17 +384,12 @@ export function computePlotSeries(document, features) {
       errors,
     }
     if (!isValid) return result
-    if (plot.kind === 'feature_vs_feature') result.x = { label: plot.x, unit: unitOf(plot.x) }
-    else if (plot.kind === 'feature_vs_input') result.x = { label: describeInputReference(plot.x), unit: '' }
-    else result.x = { label: 'Experiment', unit: '' }
+    const isAgainstFeature = plot.kind === 'feature_vs_feature'
+    result.x = isAgainstFeature ? { label: plot.x, unit: unitOf(plot.x) } : { label: describeInputReference(plot.x), unit: '' }
     for (const experiment of groups.get(plot.y).experiments) {
       const yFeature = byGroup.get(plot.y)?.get(experiment)
-      let x = experiment + 1
-      let xFeature = null
-      if (plot.kind === 'feature_vs_feature') {
-        xFeature = byGroup.get(plot.x)?.get(experiment)
-        x = xFeature?.value ?? NaN
-      } else if (plot.kind === 'feature_vs_input') x = readInput(info, plot.x, experiment)
+      const xFeature = isAgainstFeature ? byGroup.get(plot.x)?.get(experiment) : null
+      const x = isAgainstFeature ? (xFeature?.value ?? NaN) : readInput(info, plot.x, experiment)
       const y = yFeature?.value ?? NaN
       if (!Number.isFinite(x) || !Number.isFinite(y)) {
         const failed = [yFeature, xFeature].find((feature) => feature?.error)

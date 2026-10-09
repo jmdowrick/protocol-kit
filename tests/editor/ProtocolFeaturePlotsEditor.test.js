@@ -146,19 +146,22 @@ describe('ProtocolFeaturePlotsEditor', () => {
     expect(wrapper.find('form button[type="submit"]').attributes('disabled')).toBeDefined()
   })
 
-  it('edits a plot: by experiment, a line per value of an input, keeping its title', async () => {
+  it('edits a plot: against an input, a line per value of another, keeping its title', async () => {
     mountPlots(DOCUMENT)
     await wrapper.find('button[aria-label="Edit feature plot I-V"]').trigger('click')
     expect(wrapper.find('form').attributes('aria-label')).toBe('Edit feature plot I-V')
     expect(findSelect('Feature on x').props('modelValue')).toBe('V_step')
-    await chooseKind('feature_vs_experiment')
+    await chooseKind('feature_vs_input')
+    await pick('Input on x', 'i_Na/g_Na')
     wrapper.findComponent(Checkbox).vm.$emit('update:modelValue', true)
     await flushPromises()
     expect(shownMessages()).toEqual(['Choose the input whose values each draw a line.'])
-    await pick('Input for the series', 'i_Na/g_Na')
+    await pick('Input for the series', 'clamp/V_cmd')
     await pick('Sub-experiment of the input for the series', 0)
     await wrapper.find('form').trigger('submit')
-    expect(emittedDocuments()[0].prediction_plots).toEqual([{ name: 'I-V', kind: 'feature_vs_experiment', x: null, y: 'I_peak', series: { params_to_change: 'i_Na/g_Na', subexperiment_idx: 0 } }])
+    expect(emittedDocuments()[0].prediction_plots).toEqual([
+      { name: 'I-V', kind: 'feature_vs_input', x: { params_to_change: 'i_Na/g_Na', subexperiment_idx: 1 }, y: 'I_peak', series: { params_to_change: 'clamp/V_cmd', subexperiment_idx: 0 } },
+    ])
   })
 
   it('asks before removing a plot', async () => {
