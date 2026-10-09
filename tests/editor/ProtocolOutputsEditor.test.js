@@ -75,7 +75,7 @@ describe('ProtocolOutputsEditor', () => {
   it('lists the outputs, validation data read-only, and warns what needs CA #536', () => {
     mountOutputs(readFixture('prediction_items_536_obs_data.json'))
     const outputs = wrapper.findAll('.output')
-    expect(outputs.map((output) => output.find('.output-name').text())).toEqual(['V_trace', 'i_Na_holding', 'I_peak', 'V_step', 'I_late_e1'])
+    expect(outputs.map((output) => output.find('.output-name').text())).toEqual(['membrane/V', 'i_Na/i_Na', 'I_peak', 'V_step', 'i_Na/i_Na'])
     const peak = outputs[2]
     expect(peak.find('.output-chip').text()).toBe('Minimum in a range')
     expect(peak.find('.output-meta').text()).toContain('over sub-experiment 2')
@@ -85,8 +85,8 @@ describe('ProtocolOutputsEditor', () => {
 
     const data = outputs[4]
     expect(data.find('.output-chip--data').text()).toBe('Validation data')
-    expect(data.find('button[aria-label="Edit output I_late_e1"]').exists()).toBe(false)
-    expect(data.find('button[aria-label="Remove output I_late_e1"]').exists()).toBe(false)
+    expect(data.find('button[aria-label="Edit output i_Na/i_Na"]').exists()).toBe(false)
+    expect(data.find('button[aria-label="Remove output i_Na/i_Na"]').exists()).toBe(false)
     expect(wrapper.find('.messages').text()).toContain('needs circulatory_autogen with #536; released libcuflynx 0.7.3 and current CUFLynx reject this file')
   })
 
@@ -123,22 +123,51 @@ describe('ProtocolOutputsEditor', () => {
     expect(wrapper.findAll('form .p-message')).toHaveLength(0)
   })
 
-  it('offers parameters only for a mean', async () => {
+  it('offers parameters for their mean alone, and picks it for one', async () => {
     mountOutputs(readFixture('br-1977_obs_data.json'))
     await fillForm({})
-    const offered = () => VARIABLES.filter((variable) => wrapper.findComponent(VariablePicker).props('filter')(variable)).map(({ name }) => name)
-    expect(offered()).toEqual(['membrane/V', 'i_Na/i_Na'])
-    await fillForm({ kind: 'feature', operation: 'mean' })
-    expect(offered()).toEqual(['membrane/V', 'membrane/V_clamp', 'i_Na/i_Na'])
-    await fillForm({ variable: VARIABLES[1], operation: 'max' })
+    const picker = wrapper.findComponent(VariablePicker)
+    expect(picker.props('filter')(VARIABLES[1])).toBe(true)
+    expect(VARIABLES.map((variable) => picker.props('describe')(variable))).toEqual([null, 'A parameter: only its mean can be recorded', null])
+    await fillForm({ variable: VARIABLES[1] })
+    expect(wrapper.findComponent(SelectButton).props('modelValue')).toBe('feature')
+    expect(wrapper.findComponent(Select).props('modelValue')).toBe('mean')
+    expect(wrapper.findAll('form .p-message')).toHaveLength(0)
+    await fillForm({ operation: 'max' })
     expect(wrapper.findAll('form .p-message').map((message) => message.text())).toEqual(['membrane/V_clamp is a parameter: only its mean can be recorded.'])
+  })
+
+  it("keeps the variable when its caption is clicked, as the caption isn't a label", async () => {
+    mountOutputs(readFixture('br-1977_obs_data.json'))
+    await fillForm({ variable: VARIABLES[0] })
+    expect(wrapper.find('form label button[aria-label="Choose another variable"]').exists()).toBe(false)
+    await wrapper.find('[role="group"][aria-label="Variable"] > span').trigger('click')
+    expect(wrapper.find('.picked').text()).toContain('membrane/V')
+  })
+
+  it('refuses a range field that reads as no number', async () => {
+    mountOutputs(readFixture('br-1977_obs_data.json'))
+    await fillForm({ variable: VARIABLES[0], kind: 'feature', operation: 'max_in_range', range: [0.1, 1] })
+    await wrapper.find('input[aria-label="Range start, as a fraction of the sub-experiment"]').setValue('0.2x')
+    expect(wrapper.findAll('form .p-message').map((message) => message.text())).toEqual(['Enter the range as numbers.'])
+    expect(wrapper.find('form button[type="submit"]').attributes('disabled')).toBeDefined()
+    await wrapper.find('input[aria-label="Range start, as a fraction of the sub-experiment"]').setValue('0.2')
+    expect(wrapper.findAll('form .p-message')).toHaveLength(0)
+  })
+
+  it('gives an error of all its items once', async () => {
+    const obsData = readFixture('prediction_items_536_obs_data.json')
+    obsData.protocol_info.sim_times[1] = [250, 250]
+    mountOutputs(obsData)
+    await fillForm({ variable: VARIABLES[0], kind: 'feature', operation: 'max_in_range', range: [0.5, 0.2] })
+    expect(wrapper.findAll('form .p-message').map((message) => message.text())).toEqual(['The range must run from a start_frac to a later end_frac, both from 0 to 1; it is 0.5 to 0.2.'])
   })
 
   it('refuses a range that takes no samples, at the dt given', async () => {
     mountOutputs(readFixture('br-1977_obs_data.json'), { dt: 1 })
     await fillForm({ variable: VARIABLES[0], kind: 'feature', operation: 'min_in_range', range: [0, 0.0001] })
     const [message] = wrapper.findAll('form .p-message').map((found) => found.text())
-    expect(message).toMatch(/^prediction_items\[0\] \('V'\): The range 0 to 0.0001 of 2000 s takes no samples: at 1 s apart it records 2001/)
+    expect(message).toMatch(/^The range 0 to 0.0001 of 2000 s takes no samples: at 1 s apart it records 2001/)
     expect(wrapper.find('form button[type="submit"]').attributes('disabled')).toBeDefined()
   })
 
@@ -155,6 +184,20 @@ describe('ProtocolOutputsEditor', () => {
     expect(emittedDocuments()[0].prediction_items.map((item) => [item.data_item_name, item.experiment_idx, item.subexperiment_idx])).toEqual([['i_Na', 0, 1]])
   })
 
+  it('shows the last sub-experiment as chosen, and no problem until the form is touched', async () => {
+    mountOutputs(readFixture('br-1977_obs_data.json'))
+    await wrapper.find('.add-output-button').trigger('click')
+    expect(wrapper.findAllComponents(Select).at(-1).find('.p-select-label').text()).toBe('The last of each experiment')
+    expect(wrapper.findAll('form .p-message')).toHaveLength(0)
+    expect(wrapper.find('form button[type="submit"]').attributes('disabled')).toBeDefined()
+    await wrapper.find('input[aria-label="Output name"]').setValue('V')
+    expect(wrapper.findAll('form .p-message').map((found) => found.text())).toEqual(['Choose a variable to record.'])
+    await fillForm({ variable: VARIABLES[0], sub: 0 })
+    await fillForm({ sub: 'last' })
+    await wrapper.find('form').trigger('submit')
+    expect(emittedDocuments()[0].prediction_items.at(-1).subexperiment_idx).toBeUndefined()
+  })
+
   it('edits an output, its items keeping their names', async () => {
     mountOutputs(readFixture('prediction_items_536_obs_data.json'))
     await wrapper.find('button[aria-label="Edit output I_peak"]').trigger('click')
@@ -168,6 +211,19 @@ describe('ProtocolOutputsEditor', () => {
     ])
     // The validation item is as it was.
     expect(items[5]).toEqual(readFixture('prediction_items_536_obs_data.json').prediction_items[5])
+  })
+
+  it("won't edit an output with two items in one experiment, saying why", () => {
+    const obsData = readFixture('prediction_items_536_obs_data.json')
+    obsData.prediction_items = [
+      { data_item_name: 'V_max', operands: ['membrane/V'], unit: 'mV', operation: 'max' },
+      { data_item_name: 'V_min', operands: ['membrane/V'], unit: 'mV', operation: 'min' },
+    ]
+    mountOutputs(obsData)
+    const [output] = wrapper.findAll('.output')
+    expect(output.find('button[aria-label="Edit output membrane/V"]').attributes('disabled')).toBeDefined()
+    expect(output.find('button[aria-label="Remove output membrane/V"]').attributes('disabled')).toBeUndefined()
+    expect(output.find('.output-warning').text()).toContain("more than one item in an experiment (V_max, V_min), so it can't be edited here")
   })
 
   it('asks before removing an output', async () => {
@@ -190,7 +246,7 @@ describe('ProtocolEditor', () => {
     })
     const outputs = wrapper.findComponent(ProtocolOutputsEditor)
     expect(outputs.props('dt')).toBe(0.01)
-    await outputs.find('button[aria-label="Remove output V_trace"]').trigger('click')
+    await outputs.find('button[aria-label="Remove output membrane/V"]').trigger('click')
     await flushPromises()
     expect(confirm).toHaveBeenCalledOnce()
     expect(wrapper.emitted('update:document')[0][0].prediction_items).toHaveLength(5)

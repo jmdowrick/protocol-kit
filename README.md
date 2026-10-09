@@ -103,12 +103,12 @@ Every function takes and gives plain JSON-like values; edits never change the do
 | --- | --- | --- |
 | `obsDataDocument` | Reads and writes obs_data, and finds it among an archive's files as CUFLynx does. | `parseObsData`, `readObsDataParts`, `serialiseObsData`, `findObsDataExtra`, `buildObsDataLocation` |
 | `protocolValidation` | Checks `protocol_info` as CA does, with its messages, then for what running it needs. | `validateProtocolInfo`, `readAsCircAutogen`, `checkParamsToChange`, `PROTOCOL_INFO_KEYS` |
-| `protocolModel` | Reads a valid `protocol_info` as experiments of sub-experiments, and each parameter's input in each. | `readProtocolInfo`, `readShapeForm`, `buildShapeFromForm`, `nameExperiment`, `changesDuringWarmUp` |
+| `protocolModel` | Reads a valid `protocol_info` as experiments of sub-experiments, and each parameter's input in each. | `readProtocolInfo`, `readShapeForm`, `buildShapeFromForm`, `nameExperiment`, `changesDuringWarmUp`, `findParametersAtModelValues` |
 | `protocolShapes` | Expands pacing and ramp shapes into traces, as CA's `protocol_shapes.py`. | `normaliseShape`, `expandShape`, `materialiseShapes`, `validateTraceReferences`, `ProtocolShapeError` |
 | `protocolEditing` | Edits a document's protocol, renumbering its data and prediction items. | `addExperiment`, `addEmptyExperiment`, `removeExperiment`, `moveExperiment`, `addSubExperiment`, `removeSubExperiment`, `setTiming`, `addParameter`, `removeParameter`, `setValue`, `setInput`, `alignWithWarmUp`, `findObservationsAt`, `ensureProtocol` |
 | `protocolPreview` | Samples an input over time for drawing. | `interpolateTrace`, `sampleInput`, `findValueRange`, `writePolylinePoints` |
-| `predictionItems` | Edits a document's outputs, its prediction items, grouped by `item_name_for_plotting`. | `addOutput`, `updateOutput`, `removeOutput`, `listOutputs`, `isValidationData`, `findOutputKey`, `OUTPUT_OPERATIONS` |
-| `predictionValidation` | Checks prediction items as CA #536 does, with its messages, then each range for the run's `dt`. | `readPredictionItemsAsCircAutogen`, `validatePredictionItems`, `checkOperationRange`, `findPredictionItemLimits`, `readPredictionItem`, `PREDICTION_ITEM_KEYS` |
+| `predictionItems` | Edits a document's outputs, its prediction items, grouped as CA groups them for plotting (`item_name_for_plotting`, else its fallbacks). | `addOutput`, `updateOutput`, `removeOutput`, `listOutputs`, `isValidationData`, `findOutputKey`, `OUTPUT_OPERATIONS` |
+| `predictionValidation` | Checks prediction items as CA #536 does, with its messages, then each range for the run's `dt`. | `readPredictionItemsAsCircAutogen`, `validatePredictionItems`, `checkOperationRange`, `findPredictionItemLimits`, `readPredictionItem`, `nameItemForPlotting`, `PREDICTION_ITEM_KEYS` |
 | `protocolCompatibility` | Lists what CA, and so CUFLynx, can't run of a protocol. | `findCircAutogenLimits` |
 | `protocolNames` | Finds the variable a parameter names, as CA's name resolver does. | `findNameCandidates`, `resolveParameterName` |
 | `experimentColours` | Colours experiments as `experiment_colors` names them, or from a palette by place. | `resolveExperimentColour`, `EXPERIMENT_PALETTE`, `MATPLOTLIB_COLOURS` |
@@ -184,11 +184,17 @@ const getValue = (name) => variables.find((variable) => variable.name === name)?
 | --- | --- | --- |
 | `document` | `Object \| null` | The obs_data document (`v-model:document`). |
 | `variables` | `Array<{name, label?, unit?, kind?, value?}>` | The model's variables. `name` is as the protocol names it (`component/variable`, as `params_to_change` keys). Those of `kind` `'constant'` or `'global_constant'` can be added for the protocol to set; `unit` labels its lane. The picker searches `name` and `label`. |
-| `getValue` | `(name) => number \| string \| undefined` | Optional. A variable's value in the model, which a parameter starts from when added. By default, its `value` in `variables`. |
+| `getValue` | `(name) => number \| string \| undefined` | Optional. A variable's value in the model, which a parameter starts from when added, and which tells the parameters left at it (below). By default, its `value` in `variables`. |
 | `confirm` | `(options) => Promise<boolean>` | Optional. Asks before removing something; `options` has `header`, `message`, `severity`, `acceptLabel` and `rejectLabel`. By default, PrimeVue's ConfirmDialog (the editor shows its own, in the group `protocol-kit-confirm`) when the app has `ConfirmationService`, else the browser's `confirm`. |
 | `palette` | `string[]` | Optional. Colours of experiments the file doesn't colour (`experiment_colors`), by place. By default `EXPERIMENT_PALETTE`. |
 | `warn` | `(protocolInfo) => string[]` | Optional. The app's own warnings about the protocol, shown after the editor's: what it ignores, say. |
 | `dt` | `number` | Optional. The time between the samples a run records, to check that each output's range takes some. |
+
+**Parameters at their model values.** A parameter the protocol sets to its value in the model, as a plain number, in
+every experiment and sub-experiment (within rounding, a relative 1e-9) has no lane until asked for: a line below the
+others counts them, with a button to show and hide them. The document keeps them. The model's values come from
+`getValue`, else `variables`; a parameter whose value is unknown there, one added or edited while the editor is open, and
+one an error or warning names (whole, not as the start of a longer name) are always shown.
 
 **Outputs.** Below the protocol, the editor lists its outputs (`ProtocolOutputsEditor`): each with its variable, its
 operation and range, its sub-experiment and its experiments, CA's errors under it, and validation data labelled and
@@ -236,7 +242,8 @@ python scripts/generate_ca_vectors.py /path/to/circulatory_autogen
 
 `scripts/generate_prediction_vectors.py` does the same for prediction items, with #536's own parser: it rewrites
 `tests/resources/prediction-vectors.json`, for its good and bad cases and every fixture with prediction items. It
-needs a Python with that circulatory_autogen's libcuflynx installed:
+needs a Python with that circulatory_autogen's libcuflynx installed. The vectors record the commit they come from:
+#536's head (`refs/pull/536/head`), which PhLynx's exported scripts install too, so the editor and the script agree.
 
 ```sh
 /path/to/venv/bin/python scripts/generate_prediction_vectors.py /path/to/circulatory_autogen

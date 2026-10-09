@@ -1,7 +1,7 @@
 {
  "source": {
   "repository": "circulatory_autogen",
-  "commit": "96ec5c63"
+  "commit": "7e9fdb55"
  },
  "protocol_info": {
   "pre_times": [
@@ -598,6 +598,8 @@
     ],
     "stds": [
      [
+      0.5,
+      0.5,
       0.5
      ]
     ],
@@ -662,6 +664,135 @@
     ],
     "operations": [
      null
+    ],
+    "operation_kwargs": [
+     {}
+    ]
+   }
+  },
+  {
+   "name": "a series with a std of one number",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "data_type": "series",
+     "value": [
+      1,
+      2,
+      3
+     ],
+     "std": 0.5,
+     "obs_dt": 0.1
+    }
+   ],
+   "result": {
+    "operands": [
+     [
+      "membrane/V"
+     ]
+    ],
+    "units": [
+     "mV"
+    ],
+    "data_item_names": [
+     "out"
+    ],
+    "trace_names_for_plotting": [
+     "membrane/V"
+    ],
+    "item_names_for_plotting": [
+     "membrane/V"
+    ],
+    "experiment_idxs": [
+     0
+    ],
+    "subexperiment_idxs": [
+     1
+    ],
+    "data_types": [
+     "series"
+    ],
+    "values": [
+     [
+      1,
+      2,
+      3
+     ]
+    ],
+    "stds": [
+     [
+      0.5,
+      0.5,
+      0.5
+     ]
+    ],
+    "obs_dts": [
+     0.1
+    ],
+    "operations": [
+     null
+    ],
+    "operation_kwargs": [
+     {}
+    ]
+   }
+  },
+  {
+   "name": "a std without a value",
+   "prediction_items": [
+    {
+     "data_item_name": "V_peak",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "operation": "max",
+     "data_type": "constant",
+     "std": 0
+    }
+   ],
+   "result": {
+    "operands": [
+     [
+      "membrane/V"
+     ]
+    ],
+    "units": [
+     "mV"
+    ],
+    "data_item_names": [
+     "V_peak"
+    ],
+    "trace_names_for_plotting": [
+     "membrane/V"
+    ],
+    "item_names_for_plotting": [
+     "membrane/V"
+    ],
+    "experiment_idxs": [
+     0
+    ],
+    "subexperiment_idxs": [
+     1
+    ],
+    "data_types": [
+     "constant"
+    ],
+    "values": [
+     null
+    ],
+    "stds": [
+     0
+    ],
+    "obs_dts": [
+     null
+    ],
+    "operations": [
+     "max"
     ],
     "operation_kwargs": [
      {}
@@ -1463,6 +1594,117 @@
     }
    ],
    "error": "prediction_items[0] ('out') is data_type 'series', so it needs obs_dt: the spacing of its samples in seconds."
+  },
+  {
+   "name": "a constant with a std of 0",
+   "prediction_items": [
+    {
+     "data_item_name": "V_peak",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "operation": "max",
+     "data_type": "constant",
+     "value": 20.5,
+     "std": 0
+    }
+   ],
+   "error": "prediction_items[0] ('V_peak'): every 'std' entry must be finite and > 0, got 0."
+  },
+  {
+   "name": "a constant with a negative std",
+   "prediction_items": [
+    {
+     "data_item_name": "V_peak",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "operation": "max",
+     "data_type": "constant",
+     "value": 20.5,
+     "std": -1.5
+    }
+   ],
+   "error": "prediction_items[0] ('V_peak'): every 'std' entry must be finite and > 0, got -1.5."
+  },
+  {
+   "name": "a series with a negative std",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "data_type": "series",
+     "value": [
+      1,
+      2,
+      3
+     ],
+     "std": [
+      0.5,
+      -0.5,
+      0.5
+     ],
+     "obs_dt": 0.1
+    }
+   ],
+   "error": "prediction_items[0] ('out'): every 'std' entry must be finite and > 0, got [0.5, -0.5, 0.5]."
+  },
+  {
+   "name": "a series with one std of 0",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "data_type": "series",
+     "value": [
+      1,
+      2,
+      3
+     ],
+     "std": [
+      0
+     ],
+     "obs_dt": 0.1
+    }
+   ],
+   "error": "prediction_items[0] ('out'): every 'std' entry must be finite and > 0, got [0]."
+  },
+  {
+   "name": "a series of rows with a std per row",
+   "prediction_items": [
+    {
+     "data_item_name": "out",
+     "operands": [
+      "membrane/V"
+     ],
+     "unit": "mV",
+     "data_type": "series",
+     "value": [
+      [
+       1,
+       2
+      ],
+      [
+       3,
+       4
+      ]
+     ],
+     "std": [
+      1,
+      1
+     ],
+     "obs_dt": 0.1
+    }
+   ],
+   "error": "prediction_items[0] ('out'): 'std' has 2 entries but the series has 4 points; give one number or one per point."
   },
   {
    "name": "kwargs without an operation",

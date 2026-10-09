@@ -7,7 +7,7 @@ import ConfirmationService from 'primevue/confirmationservice'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { EXPERIMENT_PALETTE } from '../../src/core/experimentColours.js'
-import { ProtocolEditor, VariablePicker } from '../../src/editor/index.js'
+import { ProtocolCellEditor, ProtocolEditor, VariablePicker } from '../../src/editor/index.js'
 
 const RESOURCES = join(__dirname, '../resources')
 const readFixture = (fileName) => JSON.parse(readFileSync(join(RESOURCES, fileName), 'utf8'))
@@ -211,6 +211,111 @@ describe('ProtocolEditor', () => {
       'experiment_labels has 2 entries for 1 experiments.',
       'Ignored here.',
     ])
+  })
+})
+
+describe('ProtocolEditor, parameters at their model values', () => {
+  // Two sub-experiments: V_clamp steps, the others stay at the model's values (g_K's read from a string).
+  const atModelValues = () => ({
+    protocol_info: {
+      pre_times: [0],
+      sim_times: [[1, 1]],
+      params_to_change: {
+        'parameters/g_Na': [[0.12, 0.12]],
+        'membrane/V_clamp': [[-80, -40]],
+        'parameters/g_K': [[0.036, 0.036]],
+        'global_parameters/T': [[0, 0]],
+      },
+    },
+  })
+  const laneNames = () => wrapper.findAll('.lane-label').map((label) => label.attributes('title'))
+  const toggle = () => wrapper.find('.collapsed-toggle')
+
+  it('tucks them away below the others, and shows and hides them on asking', async () => {
+    mountEditor(atModelValues())
+    expect(laneNames()).toEqual(['membrane/V_clamp'])
+    expect(wrapper.find('.collapsed-note span').text()).toBe('3 parameters at their model values')
+    expect(toggle().attributes('aria-expanded')).toBe('false')
+    expect(toggle().attributes('aria-label')).toBe('Show 3 parameters at their model values')
+
+    await toggle().trigger('click')
+    expect(laneNames()).toEqual(['parameters/g_Na', 'membrane/V_clamp', 'parameters/g_K', 'global_parameters/T'])
+    expect(toggle().attributes('aria-expanded')).toBe('true')
+    expect(toggle().text()).toBe('Hide')
+
+    await toggle().trigger('click')
+    expect(laneNames()).toEqual(['membrane/V_clamp'])
+    // The document keeps them.
+    expect(wrapper.emitted('update:document')).toBeUndefined()
+  })
+
+  it('shows one again once it is set to something else', async () => {
+    mountEditor(atModelValues())
+    await toggle().trigger('click')
+    const edited = atModelValues()
+    edited.protocol_info.params_to_change['parameters/g_Na'][0][1] = 0.2
+    await wrapper.setProps({ document: edited })
+    await toggle().trigger('click')
+    expect(laneNames()).toEqual(['parameters/g_Na', 'membrane/V_clamp'])
+    expect(wrapper.find('.collapsed-note span').text()).toBe('2 parameters at their model values')
+  })
+
+  it('shows a parameter added in the editor, though at its model value', async () => {
+    const document = atModelValues()
+    delete document.protocol_info.params_to_change['parameters/g_Na']
+    mountEditor(document)
+    await wrapper.find('.add-parameter-button').trigger('click')
+    wrapper.findComponent(VariablePicker).vm.$emit('pick', VARIABLES[3])
+    await flushPromises()
+    const [edited] = emittedDocuments()
+    expect(edited.protocol_info.params_to_change['parameters/g_Na']).toEqual([[0.12, 0.12]])
+    await wrapper.setProps({ document: edited })
+    expect(laneNames()).toEqual(['membrane/V_clamp', 'parameters/g_Na'])
+    expect(wrapper.find('.collapsed-note span').text()).toBe('2 parameters at their model values')
+  })
+
+  it('shows those an error or warning names', () => {
+    const document = atModelValues()
+    // CA refuses the row as too short; the editor reads the missing value as 0, T's model value.
+    document.protocol_info.params_to_change['global_parameters/T'] = [[0]]
+    mountEditor(document, { warn: () => ['parameters/g_K is ignored here.'] })
+    expect(wrapper.find('.messages').text()).toContain('global_parameters/T[0]: 1 sub value(s), expected 2')
+    expect(laneNames()).toEqual(['membrane/V_clamp', 'parameters/g_K', 'global_parameters/T'])
+    expect(wrapper.find('.collapsed-note span').text()).toBe('1 parameter at its model value')
+  })
+
+  it('keeps one edited back to its model value shown', async () => {
+    const document = atModelValues()
+    document.protocol_info.params_to_change['parameters/g_Na'] = [[0.12, 0.2]]
+    mountEditor(document)
+    expect(laneNames()).toEqual(['parameters/g_Na', 'membrane/V_clamp'])
+    await wrapper.find('[aria-label="Change how parameters/g_Na varies in sub-experiment 2"]').trigger('click')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await flushPromises()
+    wrapper.findComponent(ProtocolCellEditor).vm.$emit('apply', { value: 0.12 })
+    await flushPromises()
+    const [edited] = emittedDocuments()
+    expect(edited.protocol_info.params_to_change['parameters/g_Na']).toEqual([[0.12, 0.12]])
+    await wrapper.setProps({ document: edited })
+    expect(laneNames()).toEqual(['parameters/g_Na', 'membrane/V_clamp'])
+    expect(wrapper.find('.collapsed-note span').text()).toBe('2 parameters at their model values')
+  })
+
+  it('reads a message as naming a parameter only by its whole name', () => {
+    mountEditor(atModelValues(), { warn: () => ['parameters/g_Ks is ignored here.', 'See (global_parameters/T).'] })
+    expect(laneNames()).toEqual(['membrane/V_clamp', 'global_parameters/T'])
+    expect(wrapper.find('.collapsed-note span').text()).toBe('2 parameters at their model values')
+  })
+
+  it('shows those whose model value is unknown', () => {
+    const getValue = (name) => (name === 'parameters/g_Na' ? undefined : name === 'global_parameters/T' ? 'n/a' : VARIABLES.find((variable) => variable.name === name)?.value)
+    mountEditor(atModelValues(), { getValue })
+    expect(laneNames()).toEqual(['parameters/g_Na', 'membrane/V_clamp', 'global_parameters/T'])
+  })
+
+  it('offers no line when none is at its model value', () => {
+    mountEditor(readFixture('br-1977_obs_data.json'))
+    expect(wrapper.find('.collapsed-note').exists()).toBe(false)
   })
 })
 

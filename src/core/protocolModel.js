@@ -104,6 +104,33 @@ export function readProtocolInfo(protocolInfo) {
   return { experiments, controls }
 }
 
+// How near a number is to a parameter's value in the model to count as it, relative to the larger of the two.
+const MODEL_VALUE_TOLERANCE = 1e-9
+
+/**
+ * Finds the parameters a protocol sets to their value in the model, as a plain number, in every experiment and
+ * sub-experiment: those an editor can tuck away.
+ *
+ * @param {Object} view - From readProtocolInfo.
+ * @param {(parameter: string) => number|string|null|undefined} getValue - A parameter's value in the model.
+ * @returns {string[]} In the view's order; none whose value in the model is unknown.
+ */
+export function findParametersAtModelValues(view, getValue) {
+  return view.controls
+    .filter(({ parameter, cells }) => {
+      const raw = getValue(parameter)
+      const value = typeof raw === 'string' && raw.trim() !== '' ? Number(raw) : raw
+      if (typeof value !== 'number' || !Number.isFinite(value)) return false
+      const isAtValue = (cell) =>
+        cell.kind === 'constant' &&
+        typeof cell.value === 'number' &&
+        Number.isFinite(cell.value) &&
+        Math.abs(cell.value - value) <= MODEL_VALUE_TOLERANCE * Math.max(Math.abs(cell.value), Math.abs(value))
+      return cells.every((row) => row.every(isAtValue))
+    })
+    .map(({ parameter }) => parameter)
+}
+
 /**
  * Whether an input changes during a warm-up, so that CA, starting it with the warm-up, runs it earlier than written.
  *

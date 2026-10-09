@@ -5,7 +5,7 @@
  * validation data: listed, never changed here. Each edit gives a new document, keeping everything it doesn't touch.
  */
 import { isMapping } from './protocolShapes.js'
-import { readOperation } from './predictionValidation.js'
+import { nameItemForPlotting, readOperation } from './predictionValidation.js'
 
 // The operations an output can take, from circulatory_autogen's own (operation_funcs.py, operation_funcs_user.py).
 // Each gives one number, in the operand's unit. Those in a range take start_frac and end_frac.
@@ -41,12 +41,13 @@ const copy = (document) => JSON.parse(JSON.stringify(document))
 export const isValidationData = (item) => DATA_KEYS.some((key) => item?.[key] != null)
 
 /**
- * Names the output an item is part of: its item_name_for_plotting, else its own name.
+ * Names the output an item is part of, as CA groups it for plotting: its item_name_for_plotting, else its
+ * trace_name_for_plotting, else its first operand, else its own name.
  *
  * @param {Object} item
  * @returns {string}
  */
-const nameGroup = (item) => String(item.item_name_for_plotting ?? item.data_item_name ?? '(unnamed)')
+const nameGroup = (item) => nameItemForPlotting(item) || '(unnamed)'
 
 /**
  * Gives the key an output is known by: its name, and whether it is validation data, which never shares an output
@@ -66,15 +67,17 @@ export const findOutputKey = (item) => `${isValidationData(item) ? 'data' : 'out
 const listItems = (document) => (isMapping(document) && Array.isArray(document.prediction_items) ? document.prediction_items : [])
 
 /**
- * Lists a document's outputs: its prediction items grouped by item_name_for_plotting, or each by its own name when it
- * has none, in the order of their first items.
+ * Lists a document's outputs: its prediction items grouped as CA groups them for plotting (nameGroup), in the order
+ * of their first items.
  *
  * @param {Object|Array|null} document
  * @returns {Array<{key: string, name: string, kind: 'trace'|'feature', operands: Array, unit: string,
  *   operation: string|null, operationKwargs: Object, subexperiment: number|null, traceName: string|null,
- *   isValidationData: boolean, isUniform: boolean, experiments: number[], items: Array<{index: number, name: string,
- *   experiment: number, subexperiment: number|null}>}>} `subexperiment` is null for the experiment's last, and the
- *   definition is the first item's; `isUniform` is false when its items differ in more than their experiment.
+ *   isValidationData: boolean, isUniform: boolean, hasRepeatedExperiment: boolean, experiments: number[],
+ *   items: Array<{index: number, name: string, experiment: number, subexperiment: number|null}>}>} `subexperiment` is
+ *   null for the experiment's last, and the definition is the first item's; `isUniform` is false when its items
+ *   differ in more than their experiment; `hasRepeatedExperiment` is true when two of them are in one experiment,
+ *   which updateOutput can't write.
  */
 export function listOutputs(document) {
   const groups = new Map()
@@ -106,7 +109,7 @@ export function listOutputs(document) {
     group.items.push({ index, name: String(item.data_item_name ?? ''), experiment, subexperiment: item.subexperiment_idx ?? null })
     if (!group.experiments.includes(experiment)) group.experiments.push(experiment)
   })
-  return [...groups.values()].map(({ first, ...group }) => group)
+  return [...groups.values()].map(({ first, ...group }) => ({ ...group, hasRepeatedExperiment: group.items.length > group.experiments.length }))
 }
 
 /**
@@ -219,18 +222,20 @@ function findEditableItems(document, key) {
 /**
  * Changes an output: its items are written afresh where the first of them was. An item keeps its name while the
  * output keeps its own, unless it was named for one experiment and the output now has several. Validation data is
- * never changed.
+ * never changed, nor an output with two items in one experiment, as writing one item per experiment would drop one.
  *
  * @param {Object} document
  * @param {string} key - From listOutputs.
  * @param {Object} change - Any of what addOutput takes; the rest stays as it is.
- * @returns {Object} The document given, when there is no such output to change.
+ * @returns {Object} The document given, when there is no such output to change, or it has two items in one
+ *   experiment.
  */
 export function updateOutput(document, key, change) {
   const places = findEditableItems(document, key)
   if (!places.length) return document
   const edited = ensureObject(document)
   const current = listOutputs(edited).find((group) => group.key === key)
+  if (current.hasRepeatedExperiment) return document
   const output = {
     name: current.name,
     operands: current.operands,

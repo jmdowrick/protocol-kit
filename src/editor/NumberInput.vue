@@ -19,7 +19,8 @@
 <script setup>
 /**
  * A number field that takes any number as typed, 1e-9 and 2.5E+6 too, as small parameter values need; a value is
- * passed on once it reads as a number, and the field shows the value again when left.
+ * passed on once it reads as a number, and the field shows the value again when left. It emits `invalid` with whether
+ * its text reads as no number, which leaves the value as it was, so a form can refuse it.
  */
 import { ref, watch } from 'vue'
 
@@ -32,7 +33,7 @@ const props = defineProps({
   suffix: { type: String, default: '' },
   autofocus: { type: Boolean, default: false },
 })
-const emit = defineEmits(['update:modelValue', 'keydown', 'blur'])
+const emit = defineEmits(['update:modelValue', 'invalid', 'keydown', 'blur'])
 
 /**
  * Writes a number as the field shows it: in full, without float noise.
@@ -51,6 +52,7 @@ watch(text, (typed) => {
   isInvalid.value = !Number.isFinite(value)
   if (!isInvalid.value && value !== props.modelValue) emit('update:modelValue', value)
 })
+watch(isInvalid, (invalid) => emit('invalid', invalid), { immediate: true })
 watch(
   () => props.modelValue,
   (value) => {

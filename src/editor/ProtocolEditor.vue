@@ -160,6 +160,19 @@
           </div>
         </div>
 
+        <p v-if="collapsedParameters.length" class="collapsed-note">
+          <span>{{ describeCollapsed(collapsedParameters.length) }}</span>
+          <Button
+            :label="isShowingCollapsed ? 'Hide' : 'Show'"
+            link
+            size="small"
+            class="collapsed-toggle"
+            :aria-expanded="isShowingCollapsed"
+            :aria-label="`${isShowingCollapsed ? 'Hide' : 'Show'} ${describeCollapsed(collapsedParameters.length)}`"
+            @click="isShowingCollapsed = !isShowingCollapsed"
+          />
+        </p>
+
         <!-- As Add slider and Add plot are: the search shows when asked for, and tucks away after a pick. -->
         <div v-if="isAddingParameter" ref="parameterPickerEl" class="add-parameter">
           <VariablePicker
@@ -180,7 +193,7 @@
           />
         </div>
         <Button v-else label="Add parameter to set" icon="pi pi-plus" text size="small" class="add-parameter-button" @click="startAddingParameter" />
-        <p v-if="!lanes.length" class="lanes-empty">Add a parameter for the experiments to set, such as a stimulus current or a conductance.</p>
+        <p v-if="!view.controls.length" class="lanes-empty">Add a parameter for the experiments to set, such as a stimulus current or a conductance.</p>
 
       </div>
     </div>
@@ -278,7 +291,7 @@ import {
   setTiming,
   setValue,
 } from '../core/protocolEditing.js'
-import { changesDuringWarmUp, nameExperiment, readProtocolInfo } from '../core/protocolModel.js'
+import { changesDuringWarmUp, findParametersAtModelValues, nameExperiment, readProtocolInfo } from '../core/protocolModel.js'
 import { findValueRange, sampleInput, writePolylinePoints } from '../core/protocolPreview.js'
 import { validateProtocolInfo } from '../core/protocolValidation.js'
 
@@ -345,9 +358,52 @@ const clashingSubs = computed(
     )
 )
 
+// Parameters added or edited while the editor is open, shown even at their model values.
+const touchedParameters = ref(new Set())
+const isShowingCollapsed = ref(false)
+// Parameters an error or warning names, or with a segment CA refuses, never tucked away.
+const flaggedParameters = computed(() => {
+  const messages = [...validation.value.errors, ...validation.value.warnings]
+  return new Set(
+    view.value.controls
+      .filter(({ parameter, cells }) => messages.some((message) => namesParameter(message, parameter)) || cells.some((row) => row.some((cell) => cell.error)))
+      .map(({ parameter }) => parameter)
+  )
+})
+// Parameters set to their model value everywhere, tucked away below the others until asked for.
+const collapsedParameters = computed(() =>
+  findParametersAtModelValues(view.value, findModelValue).filter((parameter) => !touchedParameters.value.has(parameter) && !flaggedParameters.value.has(parameter))
+)
+
+/**
+ * Whether a message names a parameter whole, not as the start of a longer name (`soma/g_K` in `soma/g_Kr`).
+ *
+ * @param {string} message
+ * @param {string} parameter
+ * @returns {boolean}
+ */
+function namesParameter(message, parameter) {
+  const escaped = parameter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`(^|[^\\w/])${escaped}(?![\\w/])`).test(message)
+}
+
+/**
+ * Keeps a parameter shown for the rest of the session, so it never tucks away while being worked on.
+ *
+ * @param {string} parameter
+ */
+function touchParameter(parameter) {
+  touchedParameters.value = new Set([...touchedParameters.value, parameter])
+}
+const shownControls = computed(() => {
+  if (isShowingCollapsed.value) return view.value.controls
+  const collapsed = new Set(collapsedParameters.value)
+  return view.value.controls.filter(({ parameter }) => !collapsed.has(parameter))
+})
+
 // Each parameter's lane: its input in the warm-up and in each sub-experiment, on one scale.
 const lanes = computed(() =>
-  view.value.controls.map(({ parameter, cells }) => {
+  shownControls.value.map(({ parameter, cells }) => {
     const { preTime, subs } = experiment.value
     const row = cells[current.value]
     // CA starts a first sub-experiment's input with the warm-up, so the warm-up shows its start.
@@ -421,6 +477,14 @@ function withDefaults(info) {
  * @returns {string}
  */
 const formatNumber = (value) => (Number.isFinite(value) ? String(Number(value.toPrecision(4))) : '–')
+
+/**
+ * Says how many parameters are at their model values, for the line that shows them.
+ *
+ * @param {number} count
+ * @returns {string}
+ */
+const describeCollapsed = (count) => (count === 1 ? '1 parameter at its model value' : `${count} parameters at their model values`)
 
 /**
  * Counts an experiment's sub-experiments, shortly.
@@ -666,6 +730,7 @@ async function startAddingParameter() {
  */
 function addPicked(variable) {
   isAddingParameter.value = false
+  touchParameter(variable.name)
   edit(addParameter, variable.name, findModelValue(variable.name) ?? 0)
 }
 
@@ -747,6 +812,7 @@ function openCell(anchor, parameter, cell, sub, kind = null) {
  */
 function applyCell({ value, shape, trace, traceName }) {
   const { parameter, sub } = editing.value
+  touchParameter(parameter)
   const where = { parameter, experiment: current.value, sub }
   if (shape || trace) edit(setInput, { ...where, shape, trace })
   else edit(setValue, { ...where, value: traceName ?? value })
@@ -756,6 +822,7 @@ function applyCell({ value, shape, trace, traceName }) {
 /** Starts the edited input with its sub-experiment rather than with the warm-up. */
 function alignCell() {
   const { parameter, cell } = editing.value
+  touchParameter(parameter)
   edit(alignWithWarmUp, { parameter, experiment: current.value, ...(cell.kind === 'shape' ? { shape: cell.shape } : { trace: cell.trace }) })
   cellPopover.value.hide()
 }
@@ -1172,6 +1239,20 @@ function alignCell() {
 
 .add-parameter-button {
   align-self: flex-start;
+}
+
+.collapsed-note {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--p-text-muted-color, #64748b);
+}
+
+.collapsed-toggle {
+  padding: 0 4px;
+  font-size: inherit;
 }
 
 .lanes-empty {

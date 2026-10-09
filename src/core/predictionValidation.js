@@ -88,6 +88,24 @@ function migrateLegacyKeys(entry, index) {
 }
 
 /**
+ * Names the group an item is plotted in, as CA defaults its item_name_for_plotting: legacy keys migrated, its
+ * item_name_for_plotting, else its trace_name_for_plotting, else its first operand, else its data_item_name.
+ *
+ * @param {Object} item - A prediction item, as obs_data has it.
+ * @returns {string} '' when it names none.
+ */
+export function nameItemForPlotting(item) {
+  let entry
+  try {
+    entry = migrateLegacyKeys(isMapping(item) ? item : {}, 0)
+  } catch {
+    entry = { ...item }
+  }
+  const traceName = entry.trace_name_for_plotting ?? SCHEMA.trace_name_for_plotting.fallback(entry)
+  return formatPythonStr(entry.item_name_for_plotting ?? traceName)
+}
+
+/**
  * Checks the shape of an item's data: a constant's value and std are single numbers, a series' value a list, its std
  * one number or one per value, and it has an obs_dt. Ported from CA's check_value_shape.
  *
@@ -112,6 +130,34 @@ function checkValueShape(where, { data_type: dataType, value, std, obs_dt: obsDt
     if (obsDt == null) return `${where} is data_type 'series', so it needs obs_dt: the spacing of its samples in seconds.`
   }
   return null
+}
+
+/**
+ * Checks an item's held-out std as a data item's: one finite positive number for a constant; for a series, one such
+ * number, for every point, or one per point. Ported from CA's _held_out_std.
+ *
+ * @param {string} where - How CA names the item.
+ * @param {Object} entry - With a value and a std, its shape checked.
+ * @returns {{error: string|null, std: number|number[]|null}} CA's error, or the std as CA reads it: a number for a
+ *   constant, one per point for a series.
+ */
+function readHeldOutStd(where, { data_type: dataType, value, std }) {
+  let stds
+  if (dataType === 'constant') {
+    if (Array.isArray(std)) return { error: `${where}: a constant's 'std' is one number, got a list.`, std: null }
+    stds = [Number(std)]
+  } else {
+    const points = Array.isArray(value) ? value.flat(Infinity).length : 1
+    stds = (Array.isArray(std) ? std.flat(Infinity) : [std]).map(Number)
+    if (stds.length === 1) stds = Array(points).fill(stds[0])
+    else if (stds.length !== points) {
+      return { error: `${where}: 'std' has ${stds.length} entries but the series has ${points} points; give one number or one per point.`, std: null }
+    }
+  }
+  if (!stds.every((entry) => Number.isFinite(entry) && entry > 0)) {
+    return { error: `${where}: every 'std' entry must be finite and > 0, got ${formatPythonRepr(std)}.`, std: null }
+  }
+  return { error: null, std: dataType === 'constant' ? stds[0] : stds }
 }
 
 /**
@@ -168,6 +214,11 @@ export function readPredictionItem(rawEntry, index, simTimes) {
   }
   const shapeError = checkValueShape(where, entry)
   if (shapeError) return { error: shapeError, entry: null }
+  if (entry.value != null && entry.std != null) {
+    const { error, std } = readHeldOutStd(where, entry)
+    if (error) return { error, entry: null }
+    entry.std = std
+  }
   const operation = readOperation(entry.operation)
   const kwargs = entry.operation_kwargs ?? {}
   if (Object.keys(kwargs).length && operation == null) {
