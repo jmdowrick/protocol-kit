@@ -71,7 +71,7 @@ const looksLikeObsData = (document) => Array.isArray(document) || (isMapping(doc
  * it holds, or else the first whose contents look like obs_data. Files named with "param", PhLynx's module config and
  * its own state files are passed over.
  *
- * @param {Array<{location: string, format: string, payload: *}>} extras - omexStore's preserved extras.
+ * @param {Array<{location: string, format: string, payload: *}>} extras - The archive's extra files.
  * @returns {{index: number, entry: Object, document: Object|Array|undefined, parseError: Error|null}|null} The
  *   document is undefined, with the reason, when the file chosen isn't JSON.
  */

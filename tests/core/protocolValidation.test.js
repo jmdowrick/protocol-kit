@@ -69,10 +69,9 @@ describe('validateProtocolInfo', () => {
     ])
   })
 
-  it('warns of labels that do not match the experiments, and of a calibration-only warm-up', () => {
+  it('warns of labels that do not match the experiments, and leaves a calibration-only warm-up to the host', () => {
     expect(validateProtocolInfo({ ...MINIMAL, experiment_labels: ['a', 'b'], offline_pre_time: 10 }).warnings).toEqual([
       'experiment_labels has 2 entries for 1 experiments.',
-      'offline_pre_time is only used for calibration, so PhLynx ignores it.',
     ])
   })
 })

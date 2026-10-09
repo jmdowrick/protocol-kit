@@ -81,6 +81,9 @@ To develop against a local checkout, point the app's `package.json` at it:
 "@physiomelinks/protocol-kit": "portal:../protocol-kit"
 ```
 
+A checkout has its own `node_modules`, so the app must keep one copy of the editor's peers. With Vite:
+`resolve: { dedupe: ['vue', 'primevue', 'papaparse'] }`.
+
 ```js
 import { parseObsData, validateProtocolInfo, readProtocolInfo } from '@physiomelinks/protocol-kit'
 
@@ -147,6 +150,7 @@ const getValue = (name) => variables.find((variable) => variable.name === name)?
 | `getValue` | `(name) => number \| string \| undefined` | Optional. A variable's value in the model, which a parameter starts from when added. By default, its `value` in `variables`. |
 | `confirm` | `(options) => Promise<boolean>` | Optional. Asks before removing something; `options` has `header`, `message`, `severity`, `acceptLabel` and `rejectLabel`. By default, PrimeVue's ConfirmDialog (the editor shows its own, in the group `protocol-kit-confirm`) when the app has `ConfirmationService`, else the browser's `confirm`. |
 | `palette` | `string[]` | Optional. Colours of experiments the file doesn't colour (`experiment_colors`), by place. By default `EXPERIMENT_PALETTE`. |
+| `warn` | `(protocolInfo) => string[]` | Optional. The app's own warnings about the protocol, shown after the editor's: what it ignores, say. |
 
 The editor registers PrimeVue's tooltip directive itself. Besides `ProtocolEditor`, the entry exports its parts
 (`ProtocolCellEditor`, `InlineNumber`, `NumberInput`, `VariablePicker`) and `INPUT_KINDS`, `findInputKind`,

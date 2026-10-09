@@ -32,6 +32,7 @@
   ],
   "scripts": {
     "build": "vite build",
+    "prepack": "yarn build",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -61,6 +62,9 @@
     "vite": "^7.1.7",
     "vitest": "^4.0.18",
     "vue": "^3.5.22"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "engines": {
     "node": ">=22"

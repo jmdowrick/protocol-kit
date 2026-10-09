@@ -290,6 +290,8 @@ const props = defineProps({
   confirm: { type: Function, default: null },
   // The colours of experiments the file doesn't colour, by place.
   palette: { type: Array, default: () => EXPERIMENT_PALETTE },
+  // The host's own warnings about a protocol_info, after the editor's: `(protocolInfo) => string[]`.
+  warn: { type: Function, default: null },
 })
 const emit = defineEmits(['update:document'])
 const confirmService = inject(PrimeVueConfirmSymbol, null)
@@ -301,8 +303,9 @@ const protocolInfo = computed(() => (props.document ? readObsDataParts(props.doc
 const validation = computed(() => {
   if (!protocolInfo.value) return { errors: [], warnings: [] }
   const checked = validateProtocolInfo(protocolInfo.value)
-  // What CUFLynx couldn't run, though PhLynx can.
-  return checked.protocolInfo ? { ...checked, warnings: [...checked.warnings, ...findCircAutogenLimits(readProtocolInfo(checked.protocolInfo))] } : checked
+  const warnings = [...checked.warnings, ...(props.warn?.(protocolInfo.value) ?? [])]
+  // What CA would refuse to run, though it reads it.
+  return { ...checked, warnings: checked.protocolInfo ? [...warnings, ...findCircAutogenLimits(readProtocolInfo(checked.protocolInfo))] : warnings }
 })
 // Shown as written while it has errors CA would refuse, so it stays editable.
 const view = computed(() => readProtocolInfo(validation.value.protocolInfo ?? withDefaults(protocolInfo.value)))

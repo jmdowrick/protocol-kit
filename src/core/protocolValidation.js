@@ -1,6 +1,6 @@
 /**
  * Checks a protocol_info as circulatory_autogen does on reading obs_data (PrimitiveParsers.py), in the same order and
- * with the same messages, then for what running it in PhLynx needs besides.
+ * with the same messages, then for what running it needs besides.
  */
 import { formatPythonList, getPythonTypeName } from './pythonFormat.js'
 import { ProtocolShapeError, isMapping, materialiseShapes, validateTraceReferences } from './protocolShapes.js'
@@ -124,7 +124,7 @@ export function readAsCircAutogen(protocolInfo) {
 }
 
 /**
- * Checks a protocol_info for running in PhLynx: everything CA checks, then that each experiment has sub-experiments
+ * Checks a protocol_info for running: everything CA checks, then that each experiment has sub-experiments
  * of positive length, a warm-up that isn't negative, and a number or a trace for every value.
  *
  * @param {*} protocolInfo
@@ -171,9 +171,6 @@ export function validateProtocolInfo(protocolInfo) {
     if (read[key] != null && read[key].length !== simTimes.length) {
       warnings.push(`${key} has ${read[key].length} entries for ${simTimes.length} experiments.`)
     }
-  }
-  if (read.offline_pre_time != null) {
-    warnings.push('offline_pre_time is only used for calibration, so PhLynx ignores it.')
   }
   return { errors, warnings, protocolInfo: errors.length ? null : read }
 }

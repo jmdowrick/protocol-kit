@@ -200,6 +200,18 @@ describe('ProtocolEditor', () => {
     mountEditor(document)
     expect(wrapper.find('.lane-plot polyline').attributes('stroke')).toBe(EXPERIMENT_PALETTE[0])
   })
+
+  it("shows the host's own warnings after its checks", () => {
+    const document = readFixture('br-1977_obs_data.json')
+    document.protocol_info.experiment_labels = ['a', 'b']
+    const warn = vi.fn(() => ['Ignored here.'])
+    mountEditor(document, { warn })
+    expect(warn).toHaveBeenCalledWith(document.protocol_info)
+    expect(wrapper.findAll('.messages .p-message').map((message) => message.text())).toEqual([
+      'experiment_labels has 2 entries for 1 experiments.',
+      'Ignored here.',
+    ])
+  })
 })
 
 describe('VariablePicker', () => {
