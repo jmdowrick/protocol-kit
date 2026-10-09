@@ -130,6 +130,8 @@
       </div>
     </form>
     <Button v-else label="Add output" icon="pi pi-plus" text size="small" class="add-output-button" @click="startAdding" />
+
+    <ProtocolFeaturePlotsEditor :document="document" :confirm="confirm" @update:document="emitDocument" />
   </section>
 </template>
 
@@ -137,7 +139,7 @@
 /**
  * Edits the outputs an obs_data document records, its prediction_items: each a variable's trace, or a feature of it
  * (an operation over a sub-experiment), in the experiments chosen. Items with measured data are listed as validation
- * data, and left as they are.
+ * data, and left as they are. Below them, the plots of features across experiments (ProtocolFeaturePlotsEditor).
  */
 import { computed, ref } from 'vue'
 
@@ -150,6 +152,7 @@ import SelectButton from 'primevue/selectbutton'
 import Tooltip from 'primevue/tooltip'
 
 import NumberInput from './NumberInput.vue'
+import ProtocolFeaturePlotsEditor from './ProtocolFeaturePlotsEditor.vue'
 import VariablePicker from './VariablePicker.vue'
 import { isSettable, splitVariableName } from './variableSearch.js'
 import { EXPERIMENT_PALETTE, resolveExperimentColour } from '../core/experimentColours.js'
