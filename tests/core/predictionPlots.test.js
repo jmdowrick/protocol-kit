@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { computeFeatures } from '../../src/core/features.js'
 import { parseObsData, serialiseObsData } from '../../src/core/obsDataDocument.js'
-import { removeOutput, updateOutput } from '../../src/core/predictionItems.js'
+import { removePredictionItem, updatePredictionItem } from '../../src/core/predictionItems.js'
 import {
   addPredictionPlot,
   computePlotSeries,
@@ -229,13 +229,19 @@ describe('plots follow protocol edits', () => {
     expect(validatePredictionPlots(removed).errors).toEqual([])
   })
 
-  it("follows an output renamed, and leaves a removed one's plots for validation to report", () => {
-    const renamed = updateOutput(DOCUMENT, 'output:V_step', { name: 'V_command' })
+  it("follows a group renamed in its last item, and leaves a removed group's plots for validation to report", () => {
+    // V_step's items, renamed one by one: the plots follow once the last of them is.
+    let renamed = DOCUMENT
+    for (const index of [3, 4]) renamed = updatePredictionItem(renamed, index, { itemName: 'V_command' })
+    expect(renamed.prediction_plots[0]).toMatchObject({ x: 'V_step', y: 'I_peak' })
+    renamed = updatePredictionItem(renamed, 5, { itemName: 'V_command' })
     expect(renamed.prediction_plots[0]).toMatchObject({ x: 'V_command', y: 'I_peak' })
     expect(validatePredictionPlots(renamed).errors).toEqual([])
-    // I_peak keeps the name in its validation item, so plots keep it.
-    expect(updateOutput(DOCUMENT, 'output:I_peak', { name: 'I_min' }).prediction_plots[0].y).toBe('I_peak')
-    expect(validatePredictionPlots(removeOutput(DOCUMENT, 'output:V_step')).plotErrors[0]).toEqual([
+    // A data_item_name is no group: the plots keep theirs.
+    expect(updatePredictionItem(DOCUMENT, 0, { name: 'I_min' }).prediction_plots[0].y).toBe('I_peak')
+    let removed = DOCUMENT
+    for (const index of [5, 4, 3]) removed = removePredictionItem(removed, index)
+    expect(validatePredictionPlots(removed).plotErrors[0]).toEqual([
       "prediction_plots[0] ('Peak I_Na vs step potential'): x names no prediction items: none has the item_name_for_plotting 'V_step'.",
     ])
   })
