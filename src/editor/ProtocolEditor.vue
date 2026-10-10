@@ -208,6 +208,18 @@
       @update:document="emitDocument"
     />
 
+    <ProtocolDataItemsEditor
+      v-if="showDataItems && document && (protocolInfo || hasDataItems)"
+      :document="document"
+      :variables="variables"
+      :confirm="confirm"
+      :palette="palette"
+      :columns="dataItemColumns"
+      :read-only="dataItemsReadOnly"
+      :vocabulary="dataItemVocabulary"
+      @update:document="emitDocument"
+    />
+
     <Menu ref="kindMenu" :model="kindMenuItems" popup>
       <template #item="{ item, props: itemProps }">
         <a v-bind="itemProps.action" class="kind-item" :class="{ 'kind-item--current': item.isCurrent }">
@@ -249,7 +261,8 @@
  * Edits a protocol as circulatory autogen and CUFLynx write it, in an obs_data document. Its experiments are listed
  * beside a timeline of the one shown: a column for the warm-up and for each sub-experiment, as wide as it is long,
  * and a lane for each parameter drawing how it varies. A segment opens the editor of how it varies there. Below,
- * the outputs the experiments record (see ProtocolOutputsEditor).
+ * the outputs the experiments record (see ProtocolOutputsEditor), then the data items measured (see
+ * ProtocolDataItemsEditor), shown with the columns the host chooses.
  *
  * The host gives its model's variables, and optionally how to read their values, ask before removing, and colour
  * experiments; it needs nothing else of the host's own.
@@ -267,10 +280,12 @@ import { PrimeVueConfirmSymbol } from 'primevue/useconfirm'
 
 import InlineNumber from './InlineNumber.vue'
 import ProtocolCellEditor from './ProtocolCellEditor.vue'
+import ProtocolDataItemsEditor from './ProtocolDataItemsEditor.vue'
 import ProtocolOutputsEditor from './ProtocolOutputsEditor.vue'
 import { INPUT_KINDS, findInputKind } from './protocolKinds.js'
 import VariablePicker from './VariablePicker.vue'
 import { isSettable } from './variableSearch.js'
+import { DATA_ITEM_VOCABULARY } from '../core/dataItemVocabulary.js'
 import { EXPERIMENT_PALETTE, resolveExperimentColour } from '../core/experimentColours.js'
 import { readObsDataParts } from '../core/obsDataDocument.js'
 import { findCircAutogenLimits } from '../core/protocolCompatibility.js'
@@ -319,6 +334,15 @@ const props = defineProps({
   warn: { type: Function, default: null },
   // The time between the samples a run records, to check that each output's range takes some.
   dt: { type: Number, default: null },
+  // Whether to show the data items, which the host may leave to its own settings.
+  showDataItems: { type: Boolean, default: true },
+  // The data items' columns: 'all', 'summary' (name, variable, experiment, sub-experiment, read-only), or a list of
+  // their keys (DATA_ITEM_COLUMNS).
+  dataItemColumns: { type: [String, Array], default: 'all' },
+  // Whether the data items are only listed; by default, when their columns are only the summary's.
+  dataItemsReadOnly: { type: Boolean, default: null },
+  // The operations, cost funcs, data and plot types the data items offer, as DATA_ITEM_VOCABULARY.
+  dataItemVocabulary: { type: Object, default: () => DATA_ITEM_VOCABULARY },
 })
 const emit = defineEmits(['update:document'])
 const confirmService = inject(PrimeVueConfirmSymbol, null)
@@ -327,6 +351,7 @@ const selected = ref(0)
 const variablesByName = computed(() => new Map(props.variables.map((variable) => [variable.name, variable])))
 const unitsByPath = computed(() => new Map(props.variables.map((variable) => [variable.name, variable.unit ?? ''])))
 const protocolInfo = computed(() => (props.document ? readObsDataParts(props.document).protocolInfo : null))
+const hasDataItems = computed(() => !!props.document && readObsDataParts(props.document).dataItems.length > 0)
 const validation = computed(() => {
   if (!protocolInfo.value) return { errors: [], warnings: [] }
   const checked = validateProtocolInfo(protocolInfo.value)

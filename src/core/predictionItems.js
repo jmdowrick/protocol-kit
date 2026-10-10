@@ -5,6 +5,7 @@
  * validation data: listed, never changed here. Each edit gives a new document, keeping everything it doesn't touch.
  */
 import { isMapping } from './protocolShapes.js'
+import { renamePlotGroup } from './predictionPlots.js'
 import { nameItemForPlotting, readOperation } from './predictionValidation.js'
 
 // The operations an output can take, from circulatory_autogen's own (operation_funcs.py, operation_funcs_user.py).
@@ -221,8 +222,9 @@ function findEditableItems(document, key) {
 
 /**
  * Changes an output: its items are written afresh where the first of them was. An item keeps its name while the
- * output keeps its own, unless it was named for one experiment and the output now has several. Validation data is
- * never changed, nor an output with two items in one experiment, as writing one item per experiment would drop one.
+ * output keeps its own, unless it was named for one experiment and the output now has several. Feature plots that
+ * name a renamed output follow it. Validation data is never changed, nor an output with two items in one experiment,
+ * as writing one item per experiment would drop one.
  *
  * @param {Object} document
  * @param {string} key - From listOutputs.
@@ -266,6 +268,9 @@ export function updateOutput(document, key, change) {
   const others = edited.prediction_items.filter((_, index) => !places.includes(index))
   others.splice(places[0], 0, ...items)
   edited.prediction_items = others
+  // Feature plots follow a renamed output, unless items of the old name are left.
+  const group = nameItemForPlotting(items[0])
+  if (items.length && group !== current.name && !others.some((item) => isMapping(item) && nameItemForPlotting(item) === current.name)) renamePlotGroup(edited, current.name, group)
   return edited
 }
 

@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.4.0 (2026-10-10)
+
+- Features, computed as circulatory_autogen #536 computes them (`computeFeatures`): each prediction item with an
+  operation that gives one number, over its own sub-experiment's samples (the first included, as CA records them),
+  in the order of prediction_items, an operation_kwargs value naming an earlier feature taking its value. `max`,
+  `min`, `mean`, `max_minus_min` and their `*_in_range` forms are ported from CA's funcs (`applyOperation`): Python's
+  slicing (a string fraction repeated n - 1 times and read as an integer, as Python multiplies one), numpy's NaNs and
+  errors, and means summed in numpy's pairwise order (`sumPairwise`), so each value is CA's to the bit. Golden vectors
+  from CA's own funcs and features_from_segments (`scripts/generate_operation_vectors.py`,
+  `tests/resources/operation-vectors.json`) check it.
+- Feature plots: an obs_data's top-level `prediction_plots`, as proposed to circulatory_autogen, each a group of
+  features (`item_name_for_plotting`) across experiments against another group or an input's value in a
+  sub-experiment, optionally a line per value of an input.
+  `addPredictionPlot`, `updatePredictionPlot`, `removePredictionPlot`, `validatePredictionPlots` (the proposal's
+  checks), `listFeatureGroups`, and `computePlotSeries`, which pairs computed features into each plot's points.
+- Removing a sub-experiment keeps each plot reading its input in the same sub-experiment, or removes a plot that
+  can't (`findPlotsLosingInput`), which `findObservationsAt` names. Renaming an output renames it in the plots.
+- The editor: a Feature plots section below the outputs (`ProtocolFeaturePlotsEditor`), to add, edit and remove
+  plots, with their checks inline.
+- Data items, which both apps edit alike: `listDataItems`, `addDataItem`, `updateDataItem` and `removeDataItem` read
+  each item as a form's row and write it back as CUFLynx's obs_data editor did (`readDataItem`, `buildDataItem`):
+  value and std or a series, weight, obs_dt, operation and kwargs, cost type and kwargs, plot type, colour and labels,
+  source and comment, keys unknown kept and legacy keys written as their replacements. A renamed item is renamed in
+  other items' operation_kwargs; protocol_info is never changed.
+- `readDataItemsAsCircAutogen` reads data items as circulatory_autogen #536's parser does, with its messages, and
+  `validateDataItems` checks each for an editor: kwargs against CA's funcs, references to items computed before it,
+  experiments in the protocol, names unique across data and prediction items. `DATA_ITEM_VOCABULARY` holds CA's data
+  types, plot types, default cost, operations and cost funcs; `readObsDataOptions` reads CUFLynx's, a kwarg it calls
+  a string for its None default typed as CA's own are (a number, or an item's name). Golden vectors
+  from CA 96ec5c63 (`scripts/generate_data_item_vectors.py`, `tests/resources/data-item-vectors.json`) check them.
+- The editor: a Data items section below the feature plots (`ProtocolDataItemsEditor`), with the columns the host
+  chooses (`dataItemColumns`): `'all'` edits every field, as CUFLynx does; `'summary'` lists each item's name,
+  variable, experiment and sub-experiment read-only, as PhLynx does, and shows nothing when there are none.
+  `showDataItems` hides it, `dataItemsReadOnly` and `dataItemVocabulary` pass on. While one item is edited the others
+  can't be, and an edit keeps what it leaves alone: a series' gaps and nesting, a constant's list, a missing unit
+  (which it asks for, as CA refuses an item without one). An error the item had stays allowed when it is renamed.
+
 ## 0.3.0 (2026-10-09)
 
 - The editor tucks away the parameters a protocol sets to their value in the model, as a plain number, in every

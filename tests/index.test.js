@@ -17,7 +17,7 @@ describe('@physiomelinks/protocol-kit', () => {
 
 describe('@physiomelinks/protocol-kit/editor', () => {
   it('exports the components, and what the modules beside them export', () => {
-    expect(Object.keys(editor)).toEqual(expect.arrayContaining(['ProtocolEditor', 'ProtocolCellEditor', 'InlineNumber', 'NumberInput', 'VariablePicker']))
+    expect(Object.keys(editor)).toEqual(expect.arrayContaining(['ProtocolEditor', 'ProtocolCellEditor', 'ProtocolOutputsEditor', 'ProtocolFeaturePlotsEditor', 'InlineNumber', 'NumberInput', 'VariablePicker']))
     for (const [name, module] of Object.entries({ protocolKinds, variableSearch })) {
       for (const [key, value] of Object.entries(module)) expect(editor[key], `${name}: ${key}`).toBe(value)
     }
