@@ -31,8 +31,8 @@ const SCHEMA = {
 }
 export const PREDICTION_ITEM_KEYS = Object.keys(SCHEMA)
 // Keys superseded by circulatory_autogen #466, and the key that now carries each.
-const LEGACY_KEYS = { variable: 'data_item_name', name_for_plotting: 'trace_name_for_plotting' }
-const LEGACY_ADVICE = {
+export const LEGACY_KEYS = { variable: 'data_item_name', name_for_plotting: 'trace_name_for_plotting' }
+export const LEGACY_ADVICE = {
   variable:
     "'variable' is deprecated: use 'data_item_name' for the item's identity -- it must be unique, and it is what an " +
     "operation_kwargs reference to another item resolves against -- and 'operands' for the model variable the item " +
@@ -43,7 +43,7 @@ const LEGACY_ADVICE = {
     "which defaults to '<trace_name_for_plotting> (<operation>)'.",
 }
 // How an obs_data file may spell "no operation".
-const NO_OPERATION_SPELLINGS = ['', 'None', 'none', 'Null', 'null', 'nan']
+export const NO_OPERATION_SPELLINGS = ['', 'None', 'none', 'Null', 'null', 'nan']
 // What needs circulatory_autogen #536: released libcuflynx (0.7.3) and CUFLynx refuse these keys.
 const NEEDS_536 = ['operation', 'operation_kwargs', 'subexperiment_idx']
 
@@ -113,7 +113,7 @@ export function nameItemForPlotting(item) {
  * @param {Object} entry
  * @returns {string|null} CA's error, or null.
  */
-function checkValueShape(where, { data_type: dataType, value, std, obs_dt: obsDt }) {
+export function checkValueShape(where, { data_type: dataType, value, std, obs_dt: obsDt }) {
   if (dataType === 'constant') {
     if (Array.isArray(value)) {
       return `${where} is data_type 'constant', so its value must be a single number, not a list of ${value.length}. A list of values over time is data_type 'series' (with obs_dt).`
@@ -302,6 +302,35 @@ export function checkOperationReferences(dataNames, entries) {
 const listDataNames = (document) => (Array.isArray(document?.data_items) ? document.data_items : []).filter(isMapping).map((item) => item.data_item_name ?? item.variable).filter((name) => name != null)
 
 /**
+ * Reads each of an obs_data document's prediction_items as CA does, before it checks them against each other and the
+ * data items: every item's legacy keys, then each item.
+ *
+ * @param {Object} document - With the protocol_info whose sim_times the items refer to.
+ * @returns {{error: string|null, entries: Array<Object>}} CA's first error, or the items as readPredictionItem reads
+ *   them.
+ */
+export function readPredictionEntries(document) {
+  const items = document?.prediction_items ?? []
+  if (!Array.isArray(items)) return { error: `prediction_items must be a list of dict entries, got ${formatPythonClass(items)}`, entries: [] }
+  const simTimes = document?.protocol_info?.sim_times
+  // CA brings every item's legacy keys up to date before reading any.
+  for (const [index, item] of items.entries()) {
+    try {
+      if (isMapping(item)) migrateLegacyKeys(item, index)
+    } catch (error) {
+      return { error: error.message, entries: [] }
+    }
+  }
+  const entries = []
+  for (const [index, item] of items.entries()) {
+    const { error, entry } = readPredictionItem(item, index, simTimes)
+    if (error) return { error, entries: [] }
+    entries.push(entry)
+  }
+  return { error: null, entries }
+}
+
+/**
  * Reads an obs_data document's prediction_items as CA does: each item, then that names are unique across data and
  * prediction items, then the items operation_kwargs name. Stops at the first error, as CA does.
  *
@@ -310,23 +339,8 @@ const listDataNames = (document) => (Array.isArray(document?.data_items) ? docum
  *   (`data_item_names`, `operands`, `units`, `experiment_idxs`, `subexperiment_idxs`, `operations`, ...).
  */
 export function readPredictionItemsAsCircAutogen(document) {
-  const items = document?.prediction_items ?? []
-  if (!Array.isArray(items)) return { error: `prediction_items must be a list of dict entries, got ${formatPythonClass(items)}`, predictionInfo: null }
-  const simTimes = document?.protocol_info?.sim_times
-  // CA brings every item's legacy keys up to date before reading any.
-  for (const [index, item] of items.entries()) {
-    try {
-      if (isMapping(item)) migrateLegacyKeys(item, index)
-    } catch (error) {
-      return { error: error.message, predictionInfo: null }
-    }
-  }
-  const entries = []
-  for (const [index, item] of items.entries()) {
-    const { error, entry } = readPredictionItem(item, index, simTimes)
-    if (error) return { error, predictionInfo: null }
-    entries.push(entry)
-  }
+  const { error: readError, entries } = readPredictionEntries(document)
+  if (readError) return { error: readError, predictionInfo: null }
   const dataNames = listDataNames(document)
   const error = checkItemNamesUnique(dataNames, entries.map((entry) => entry.data_item_name)) ?? checkOperationReferences(dataNames, entries)[0]?.error
   if (error) return { error, predictionInfo: null }
