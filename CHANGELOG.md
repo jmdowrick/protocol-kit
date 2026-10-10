@@ -19,6 +19,20 @@
   can't (`findPlotsLosingInput`), which `findObservationsAt` names. Renaming an output renames it in the plots.
 - The editor: a Feature plots section below the outputs (`ProtocolFeaturePlotsEditor`), to add, edit and remove
   plots, with their checks inline.
+- Data items, which both apps edit alike: `listDataItems`, `addDataItem`, `updateDataItem` and `removeDataItem` read
+  each item as a form's row and write it back as CUFLynx's obs_data editor did (`readDataItem`, `buildDataItem`):
+  value and std or a series, weight, obs_dt, operation and kwargs, cost type and kwargs, plot type, colour and labels,
+  source and comment, keys unknown kept and legacy keys written as their replacements. A renamed item is renamed in
+  other items' operation_kwargs; protocol_info is never changed.
+- `readDataItemsAsCircAutogen` reads data items as circulatory_autogen #536's parser does, with its messages, and
+  `validateDataItems` checks each for an editor: kwargs against CA's funcs, references to items computed before it,
+  experiments in the protocol, names unique across data and prediction items. `DATA_ITEM_VOCABULARY` holds CA's data
+  types, plot types, default cost, operations and cost funcs; `readObsDataOptions` reads CUFLynx's. Golden vectors
+  from CA 96ec5c63 (`scripts/generate_data_item_vectors.py`, `tests/resources/data-item-vectors.json`) check them.
+- The editor: a Data items section below the feature plots (`ProtocolDataItemsEditor`), with the columns the host
+  chooses (`dataItemColumns`): `'all'` edits every field, as CUFLynx does; `'summary'` lists each item's name,
+  variable, experiment and sub-experiment read-only, as PhLynx does. `showDataItems` hides it, `dataItemsReadOnly`
+  and `dataItemVocabulary` pass on.
 
 ## 0.3.0 (2026-10-09)
 

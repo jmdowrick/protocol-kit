@@ -2,7 +2,7 @@
 
 Experiment protocols for [PhLynx](https://github.com/physiomelinks/PhLynx) and
 [CUFLynx](https://github.com/physiomelinks/CUFLynx): read, check, edit and preview the `protocol_info`, outputs
-(`prediction_items`) and feature plots (`prediction_plots`) of a [circulatory_autogen](https://github.com/physiomelinks/circulatory_autogen)
+(`prediction_items`), feature plots (`prediction_plots`) and measured data (`data_items`) of a [circulatory_autogen](https://github.com/physiomelinks/circulatory_autogen)
 `obs_data.json`, and compute a run's features as circulatory_autogen does, the same way in both apps.
 
 ## What it holds
@@ -20,6 +20,8 @@ Experiment protocols for [PhLynx](https://github.com/physiomelinks/PhLynx) and
     bit.
   - Feature plots: adding, changing, removing and checking `prediction_plots`, which plot a feature across experiments
     (an I–V curve, say), and pairing computed features into their points.
+  - Data items: adding, changing and removing the measured data a calibration fits, every field CUFLynx edits, and
+    checking them as circulatory_autogen #536 does, with its messages.
 - **Editor** (`@physiomelinks/protocol-kit/editor`): Vue 3 + PrimeVue 4 components that edit an obs_data document. The
   host app supplies its model's variables, a confirm dialog and a colour palette.
 
@@ -43,7 +45,11 @@ It follows circulatory_autogen's semantics for `obs_data.json`, so a file means 
 - An output is a prediction item: the trace of the variable in `operands`, or with an `operation` (and
   `operation_kwargs`) a feature of it, one number over its sub-experiment. An output in several experiments is one item
   for each, sharing `item_name_for_plotting`. An item with measured data (`value`, `std`, `data_type`, `obs_dt`) is
-  validation data: edits renumber it but never change it, and nothing here writes those keys.
+  validation data: edits renumber it but never change it, and the outputs never write those keys.
+- A data item is measured data: a `value` and `std` (one number, or a `series` of them every `obs_dt`) or a
+  distribution (`prob_dist_params`), of the variables in `operands` or a feature of them (`operation`), scored by a
+  cost (`cost_type`, by default `gaussian_MLE`) with a `weight`. Edits keep its keys as written, but write the legacy
+  `variable` and `name_for_plotting` as `data_item_name` and `trace_name_for_plotting`.
 - A feature plot (`prediction_plots`, a top-level list as proposed to circulatory_autogen; CA ignores it) pairs two
   groups of features experiment by experiment, by `experiment_idx`, or a group with an input's value in a
   sub-experiment of each. Edits keep it pointing at the same groups and sub-experiments.
@@ -119,6 +125,9 @@ Every function takes and gives plain JSON-like values; edits never change the do
 | `features` | Computes a run's features from each sub-experiment's samples, as CA's features_from_segments does. | `computeFeatures` |
 | `predictionPlots` | Edits and checks a document's feature plots, and pairs features into their points. | `addPredictionPlot`, `updatePredictionPlot`, `removePredictionPlot`, `validatePredictionPlots`, `listFeatureGroups`, `computePlotSeries`, `findPlotsLosingInput`, `PREDICTION_PLOT_KINDS` |
 | `predictionValidation` | Checks prediction items as CA #536 does, with its messages, then each range for the run's `dt`. | `readPredictionItemsAsCircAutogen`, `validatePredictionItems`, `checkOperationRange`, `findPredictionItemLimits`, `readPredictionItem`, `nameItemForPlotting`, `PREDICTION_ITEM_KEYS` |
+| `dataItems` | Edits a document's data items, each read as a form's row and written back as CUFLynx's editor did. | `listDataItems`, `addDataItem`, `updateDataItem`, `removeDataItem`, `readDataItem`, `buildDataItem`, `createDataItem`, `DATA_ITEM_FIELDS` |
+| `dataItemValidation` | Checks data items as CA #536 reads them, with its messages, then each for an editor: kwargs, references, experiments. | `readDataItemsAsCircAutogen`, `validateDataItems`, `checkOperationKwargs`, `checkCostKwargs`, `checkDataItemReferences`, `DATA_ITEM_KEYS` |
+| `dataItemVocabulary` | CA #536's data types, plot types, default cost, operations and cost funcs, for an editor to offer. | `DATA_ITEM_VOCABULARY`, `readObsDataOptions`, `DATA_TYPES`, `PLOT_TYPES`, `DEFAULT_COST_TYPE`, `DATA_ITEM_OPERATIONS`, `DATA_ITEM_COST_TYPES` |
 | `protocolCompatibility` | Lists what CA, and so CUFLynx, can't run of a protocol. | `findCircAutogenLimits` |
 | `protocolNames` | Finds the variable a parameter names, as CA's name resolver does. | `findNameCandidates`, `resolveParameterName` |
 | `experimentColours` | Colours experiments as `experiment_colors` names them, or from a palette by place. | `resolveExperimentColour`, `EXPERIMENT_PALETTE`, `MATPLOTLIB_COLOURS` |
@@ -163,6 +172,42 @@ prediction items), where CA stops at the first (`readPredictionItemsAsCircAutoge
 `int(end_frac * (n - 1))` of the n = `int(duration / dt) + 1` a sub-experiment records. Its warnings say which items need
 circulatory_autogen #536 (an `operation`, `operation_kwargs` or `subexperiment_idx`): released libcuflynx 0.7.3 and
 current CUFLynx reject them.
+
+#### Data items
+
+```js
+import { addDataItem, createDataItem, listDataItems, updateDataItem, validateDataItems } from '@physiomelinks/protocol-kit'
+
+let edited = addDataItem(document, {
+  ...createDataItem(), // a constant, the max of its variable, scored by CA's default cost
+  name: 'V_peak', // data_item_name
+  operands: ['membrane/V'],
+  unit: 'mV',
+  operation: 'max_in_range',
+  operationKwargs: { start_frac: 0, end_frac: 0.5 },
+  value: 20, // or a list for a series, with obsDt
+  std: 1.5,
+  experiment: 1,
+  subexperiment: 0,
+})
+const [row] = listDataItems(edited) // { index, name, dataType, operands, value, std, costType, plotType, ... }
+edited = updateDataItem(edited, row.index, { name: 'V_max', costType: 'gaussian_MLE_robust', costKwargs: { p_outlier: 0.1 } })
+const { errors, warnings, itemErrors, itemWarnings, sharedErrors } = validateDataItems(edited)
+```
+
+A row holds an item's fields under the names CUFLynx's editor gave them (`readDataItem`): `''` is no operation and the
+default cost, a `plotType` of null the data type's default and `''` no marker (`'None'`), and labels left `''` CA's
+defaults. `buildDataItem` writes only the fields that changed, so an item read and written back is the same, keys it
+doesn't know of included; `updateDataItem` renames an item where other data items' `operation_kwargs` name it. Every
+edit gives each item an `experiment_idx` and `subexperiment_idx` once one has them, as CA refuses a column some lack.
+
+`readDataItemsAsCircAutogen` reads data items as #536's parser does, stopping at its first error, pandas' quirks
+included. `validateDataItems` gives each item's errors, and goes on: CA's own for it, its experiment and sub-experiment
+in the protocol, its `operation_kwargs` and `cost_kwargs` against the funcs (`checkOperationKwargs`,
+`checkCostKwargs`, with difflib's suggestions), and references to items not computed before it; then what CA refuses
+of them together (names repeated across data and prediction items). It warns of an operation or cost func CA has not.
+It checks against `DATA_ITEM_VOCABULARY`, or a host's own: `readObsDataOptions` reads CUFLynx's
+`/api/obs_data/options`, user funcs included.
 
 #### Features and feature plots
 
@@ -232,6 +277,10 @@ const getValue = (name) => variables.find((variable) => variable.name === name)?
 | `palette` | `string[]` | Optional. Colours of experiments the file doesn't colour (`experiment_colors`), by place. By default `EXPERIMENT_PALETTE`. |
 | `warn` | `(protocolInfo) => string[]` | Optional. The app's own warnings about the protocol, shown after the editor's: what it ignores, say. |
 | `dt` | `number` | Optional. The time between the samples a run records, to check that each output's range takes some. |
+| `showDataItems` | `boolean` | Optional. Whether to show the data items; by default true. |
+| `dataItemColumns` | `'all' \| 'summary' \| string[]` | Optional. The data items' columns (below); by default `'all'`. |
+| `dataItemsReadOnly` | `boolean` | Optional. Whether the data items are only listed; by default, when their columns are only the summary's. |
+| `dataItemVocabulary` | `Object` | Optional. The operations, cost funcs, data and plot types the data items offer; by default `DATA_ITEM_VOCABULARY`. |
 
 **Parameters at their model values.** A parameter the protocol sets to its value in the model, as a plain number, in
 every experiment and sub-experiment (within rounding, a relative 1e-9) has no lane until asked for: a line below the
@@ -248,12 +297,31 @@ sub-experiment numbered from 1, or each experiment's last. Experiments without t
 
 **Feature plots.** Below the outputs (`ProtocolFeaturePlotsEditor`), the plots of features across experiments: each
 with what it draws and its errors. The form takes a feature (y), what it is plotted against (another feature, an
-input's value in a sub-experiment, or the experiment), optionally an input whose values each draw a line, and a title,
+input's value in a sub-experiment), optionally an input whose values each draw a line, and a title,
 named after the features until one is typed. It offers the groups whose items are all features.
 
+**Data items.** Last, the measured data (`ProtocolDataItemsEditor`), with the columns the host chooses
+(`dataItemColumns`), each a key of `DATA_ITEM_COLUMNS`: `name`, `variable`, `experiment`, `subexperiment`, `dataType`,
+`unit`, `operation` (and its kwargs), `value` (std, a series' values and `obs_dt`, or a distribution), `weight`, `cost`
+(and its kwargs), `plot` (type, colour and labels), `source` and `comment`. Two presets name them:
+
+- `'all'`, for an app that calibrates, as CUFLynx does: every column, and a form to add, edit and remove items. It
+  picks each variable an operation fills (labelled `x1`, `x2`... as CA's func names them), offers a field per keyword
+  argument of the operation and of the cost (another item's name, for an operation of no variables), and shows CA's
+  errors under each item and in the form, which won't apply while it has new ones. CUFLynx passes its own vocabulary:
+  `:data-item-vocabulary="readObsDataOptions(await getObsDataOptions())"`.
+- `'summary'`, for an app that only runs the protocol, as PhLynx does: each item's name, variable, experiment and
+  sub-experiment, one line each, read-only and unchecked. PhLynx hides the section with its "Show data items" setting:
+  `data-item-columns="summary" :show-data-items="settings.showDataItems"`.
+
+A list of keys shows those; it can be edited unless it is only the summary's, or `dataItemsReadOnly` says otherwise.
+The fields of columns not shown are kept as they are. A data-only document (a bare list of data items) shows its items
+below the offer to create a protocol.
+
 The editor registers PrimeVue's tooltip directive itself. Besides `ProtocolEditor`, the entry exports its parts
-(`ProtocolCellEditor`, `ProtocolOutputsEditor`, `ProtocolFeaturePlotsEditor`, `InlineNumber`, `NumberInput`, `VariablePicker`) and `INPUT_KINDS`, `findInputKind`,
-`searchVariables`, `splitVariableName` and `isSettable`.
+(`ProtocolCellEditor`, `ProtocolOutputsEditor`, `ProtocolFeaturePlotsEditor`, `ProtocolDataItemsEditor`, `InlineNumber`,
+`NumberInput`, `VariablePicker`) and `INPUT_KINDS`, `findInputKind`, `DATA_ITEM_COLUMNS`, `DATA_ITEM_COLUMN_PRESETS`,
+`resolveDataItemColumns`, `isSummaryColumns`, `searchVariables`, `splitVariableName` and `isSettable`.
 
 **CSS variables.** The components use the PrimeVue theme's tokens, so they follow the host's theme, light or dark. Each
 has a fallback (Aura's light value) for a host without them:
@@ -295,6 +363,14 @@ needs a Python with that circulatory_autogen's libcuflynx installed. The vectors
 
 ```sh
 /path/to/venv/bin/python scripts/generate_prediction_vectors.py /path/to/circulatory_autogen
+```
+
+`scripts/generate_data_item_vectors.py` does the same for data items, with the same Python: #536's parser on good and
+bad items and every fixture's, its `operation_kwargs` and `cost_kwargs` checks, and its vocabulary (data and plot
+types, the default cost, its operations and cost funcs, their kwargs), into `tests/resources/data-item-vectors.json`.
+
+```sh
+/path/to/venv/bin/python scripts/generate_data_item_vectors.py /path/to/circulatory_autogen
 ```
 
 ## Licence
