@@ -1,5 +1,5 @@
 <template>
-  <section class="data-items-editor" aria-label="Data items">
+  <section v-if="isEditable || items.length" class="data-items-editor" aria-label="Data items">
     <header class="data-items-head">
       <h4 class="data-items-heading">Data items</h4>
       <span class="data-items-note">{{ isEditable ? 'The measured data a calibration fits the model to: each a variable, or a feature of it, in a sub-experiment.' : 'The measured data in the file, which a calibration fits the model to.' }}</span>
@@ -17,8 +17,8 @@
           <span v-if="isShown('operation')" class="data-item-chip">{{ item.operation || 'No operation' }}</span>
           <span class="column-spacer"></span>
           <template v-if="isEditable">
-            <Button icon="pi pi-pencil" text rounded size="small" severity="secondary" :aria-label="`Edit data item ${item.name}`" @click="startEditing(item)" />
-            <Button icon="pi pi-trash" text rounded size="small" severity="secondary" :aria-label="`Remove data item ${item.name}`" @click="confirmRemovingItem(item)" />
+            <Button icon="pi pi-pencil" text rounded size="small" severity="secondary" :aria-label="`Edit data item ${item.name}`" :disabled="!!draft" @click="startEditing(item)" />
+            <Button icon="pi pi-trash" text rounded size="small" severity="secondary" :aria-label="`Remove data item ${item.name}`" :disabled="!!draft" @click="confirmRemovingItem(item)" />
           </template>
         </div>
         <div class="data-item-meta">
@@ -41,7 +41,7 @@
         </template>
       </li>
     </ul>
-    <p v-else-if="!draft" class="data-items-empty">{{ isEditable ? 'No data items yet. Add a measurement to calibrate the model against.' : 'No data items.' }}</p>
+    <p v-else-if="!draft" class="data-items-empty">No data items yet. Add a measurement to calibrate the model against.</p>
 
     <form v-if="draft" class="data-item-form" :aria-label="draft.index == null ? 'Add a data item' : `Edit data item ${draft.originalName}`" @submit.prevent="applyDraft">
       <div class="form-fields">
@@ -132,16 +132,16 @@
           Distribution (prob_dist_params, as JSON)
           <Textarea v-model="draft.texts.probDist" rows="2" auto-resize aria-label="Distribution, as JSON" :invalid="parsedProbDist === undefined" />
         </label>
-        <div v-else-if="row.dataType === 'series'" class="form-fields">
+        <div v-else-if="row.dataType === 'series' || isListed" class="form-fields">
           <label class="form-field form-field--wide">
-            Values
+            {{ row.dataType === 'series' ? 'Values' : 'Value' }}
             <InputText v-model="draft.texts.value" size="small" placeholder="1.5, 2, 2.5" aria-label="Values, separated by commas" :invalid="parsedValues === undefined" />
           </label>
           <label class="form-field">
             Std
             <InputText v-model="draft.texts.std" size="small" placeholder="One, or one per value" aria-label="Standard deviation, one or one per value" :invalid="parsedStd === undefined" />
           </label>
-          <label class="form-field">
+          <label v-if="row.dataType === 'series'" class="form-field">
             Time between values (obs_dt)
             <NumberInput v-model="row.obsDt" aria-label="Time between values" @invalid="(invalid) => (draft.invalid.obsDt = invalid)" />
           </label>
@@ -232,7 +232,7 @@
  * the columns shown (`columns`): all of them, as a calibration needs, or a summary that lists each item's variable and
  * where it is measured, read-only. Each item is checked as circulatory_autogen #536 reads it, its errors inline.
  */
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import Button from 'primevue/button'
 import Checkbox from 'primevue/checkbox'
@@ -379,7 +379,8 @@ async function confirmRemovingItem(item) {
 
 // The item being added or edited: `{ index, originalName, row, isNameTyped, isUnitTyped, texts, kwargTexts, invalid }`;
 // index is null for a new one. `row` is as readDataItem gives; `texts` holds a series' values and std and a
-// distribution as typed, `kwargTexts` the kwargs typed, and `invalid` which number fields read as no number.
+// distribution as typed, `openedTexts` the values and std as the form opened them, `kwargTexts` the kwargs typed, and
+// `invalid` which number fields read as no number.
 const draft = ref(null)
 const row = computed(() => draft.value?.row)
 
@@ -409,6 +410,7 @@ function openDraft(opened, index) {
       std: formatList(opened.std),
       probDist: opened.probDistParams ? JSON.stringify(opened.probDistParams) : '',
     },
+    openedTexts: { value: formatList(opened.value), std: formatList(opened.std) },
     kwargTexts: { operationKwargs: {}, costKwargs: {} },
     invalid: {},
   }
@@ -424,6 +426,12 @@ const startAdding = () => openDraft(createDataItem(), null)
  * @param {Object} item - From listDataItems.
  */
 const startEditing = (item) => openDraft(item, item.index)
+
+// Closes the form when the item it edits changes under it, as when a sub-experiment goes and renumbers it.
+watch(items, (listed) => {
+  const index = draft.value?.index
+  if (index != null && JSON.stringify(listed[index]?.original) !== JSON.stringify(draft.value.row.original)) draft.value = null
+})
 
 const dataTypeOptions = computed(() => [...new Set([...props.vocabulary.dataTypes, row.value?.dataType].filter(Boolean))])
 
@@ -652,6 +660,9 @@ function changeExperiment(experiment) {
 }
 
 const isDistribution = computed(() => !!row.value && isScoredByDistribution(row.value))
+// Whether a constant's value or std is a list, as a file may have it: its number fields can't show one, so both are
+// edited as text, as a series' are.
+const isListed = computed(() => !!row.value && row.value.dataType !== 'series' && (Array.isArray(row.value.value) || Array.isArray(row.value.std)))
 
 /**
  * Reads a list of numbers, separated by commas or spaces.
@@ -667,7 +678,11 @@ function readNumbers(text) {
   return numbers.every(Number.isFinite) ? numbers : undefined
 }
 
-const parsedValues = computed(() => (draft.value ? readNumbers(draft.value.texts.value) : []))
+// A series' values; a constant's one value, or its list.
+const parsedValues = computed(() => {
+  const numbers = draft.value ? readNumbers(draft.value.texts.value) : []
+  return row.value?.dataType !== 'series' && numbers?.length === 1 ? numbers[0] : numbers
+})
 // One std for every value, or one per value; null for none.
 const parsedStd = computed(() => {
   if (!draft.value?.texts.std.trim()) return null
@@ -722,6 +737,7 @@ const defaultItemName = computed(() => (row.value?.operation ? `${row.value.trac
 
 /**
  * Writes the draft as updateDataItem takes it: a series' values, its std and a distribution as read from their text.
+ * Values and std whose text is as the form opened it stay as the item has them, gaps and nesting included.
  *
  * @returns {Object}
  */
@@ -729,8 +745,10 @@ function buildRow() {
   const { original, isValueEditable, ...fields } = row.value
   if (!isShown('value') || !isValueEditable) return fields
   if (isDistribution.value) return { ...fields, probDistParams: parsedProbDist.value }
-  if (fields.dataType === 'series') return { ...fields, value: parsedValues.value, std: parsedStd.value }
-  return fields
+  if (fields.dataType !== 'series' && !isListed.value) return fields
+  const { texts, openedTexts } = draft.value
+  const read = (key, parsed) => (original && texts[key] === openedTexts[key] ? fields[key] : parsed)
+  return { ...fields, value: read('value', parsedValues.value), std: read('std', parsedStd.value) }
 }
 
 /**
@@ -745,22 +763,23 @@ const applyRow = (change) => (draft.value.index == null ? addDataItem(props.docu
 const draftProblems = computed(() => {
   if (!draft.value) return []
   const problems = []
-  const { name, operands, operation, operationKwargs, dataType, isValueEditable } = row.value
+  const { name, unit, operands, operation, operationKwargs, dataType, isValueEditable } = row.value
   if (!name.trim()) problems.push('Name the data item.')
   else if (items.value.some((item) => item.index !== draft.value.index && item.name === name)) problems.push(`A data item is already named ${name}.`)
+  if (isShown('unit') && !unit.trim()) problems.push('Give the unit.')
   if (!operands.some(Boolean) && !(operation && Object.keys(operationKwargs).length)) problems.push('Choose a variable, or an operation whose arguments name other data items.')
   const invalid = Object.entries(draft.value.invalid).filter(([field, isInvalid]) => isInvalid && isFieldShown(field))
   if (invalid.length) problems.push(`Enter the ${invalid.map(([field]) => FIELD_NAMES[field]).join(', ')} as a number.`)
-  if (isShown('value') && isValueEditable && !isDistribution.value && dataType === 'series' && (parsedValues.value === undefined || parsedStd.value === undefined)) problems.push('Enter the values and std as numbers.')
+  if (isShown('value') && isValueEditable && !isDistribution.value && (dataType === 'series' || isListed.value) && (parsedValues.value === undefined || parsedStd.value === undefined)) problems.push('Enter the values and std as numbers.')
   if (isShown('value') && isValueEditable && isDistribution.value && parsedProbDist.value === undefined) problems.push('Enter the distribution as a JSON object.')
   const kwargs = listInvalidKwargs()
   if (kwargs.length) problems.push(`Enter ${kwargs.join(', ')} as a number.`)
   if (problems.length) return problems
   const index = draft.value.index ?? items.value.length
-  const edited = applyRow(buildRow())
-  const after = validateDataItems(edited, { vocabulary: props.vocabulary })
-  const before = new Set(checked.value?.errors ?? [])
-  return [...new Set([...(after.itemErrors[index] ?? []), ...after.sharedErrors].filter((message) => !before.has(message)).map(describeItemMessage))]
+  const after = validateDataItems(applyRow(buildRow()), { vocabulary: props.vocabulary })
+  // The errors the item had, worded without its name, so a rename doesn't make them new.
+  const before = new Set([...(draft.value.index == null ? [] : problemsOf({ index }, 'itemErrors')), ...sharedErrors.value])
+  return [...new Set([...(after.itemErrors[index] ?? []).map(describeItemMessage), ...after.sharedErrors])].filter((message) => !before.has(message))
 })
 
 /**
@@ -772,7 +791,8 @@ const draftProblems = computed(() => {
 function isFieldShown(field) {
   if (field === 'weight') return isShown('weight')
   if (!isShown('value') || !row.value.isValueEditable || isDistribution.value) return false
-  return row.value.dataType === 'series' ? field === 'obsDt' : field === 'value' || field === 'std'
+  if (row.value.dataType === 'series') return field === 'obsDt'
+  return !isListed.value && (field === 'value' || field === 'std')
 }
 
 // The problems shown: none for a new item until it has a variable or a name, the button saying it is not ready.

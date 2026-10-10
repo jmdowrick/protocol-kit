@@ -34,6 +34,14 @@ describe('readDataItem and buildDataItem', () => {
     expect(buildDataItem({ ...row, name: 'b' }).data_item_name).toBe('b')
   })
 
+  it('leaves out a unit the item lacks until one is given, as CA refuses it', () => {
+    const { unit, ...item } = PEAK
+    const row = readDataItem(item)
+    expect(row.unit).toBe('')
+    expect(buildDataItem({ ...row, comment: 'peak' })).toEqual({ ...item, comment: 'peak' })
+    expect(buildDataItem({ ...row, unit })).toEqual({ ...item, unit })
+  })
+
   it('keeps keys it does not know of, and the spelling of a field left alone', () => {
     const item = { ...PEAK, data_type: 'timeseries', plot_type: 'none', species: 'rat', operation: 'None' }
     const row = readDataItem(item)

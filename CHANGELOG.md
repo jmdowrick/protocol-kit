@@ -32,8 +32,10 @@
   from CA 96ec5c63 (`scripts/generate_data_item_vectors.py`, `tests/resources/data-item-vectors.json`) check them.
 - The editor: a Data items section below the feature plots (`ProtocolDataItemsEditor`), with the columns the host
   chooses (`dataItemColumns`): `'all'` edits every field, as CUFLynx does; `'summary'` lists each item's name,
-  variable, experiment and sub-experiment read-only, as PhLynx does. `showDataItems` hides it, `dataItemsReadOnly`
-  and `dataItemVocabulary` pass on.
+  variable, experiment and sub-experiment read-only, as PhLynx does, and shows nothing when there are none.
+  `showDataItems` hides it, `dataItemsReadOnly` and `dataItemVocabulary` pass on. While one item is edited the others
+  can't be, and an edit keeps what it leaves alone: a series' gaps and nesting, a constant's list, a missing unit
+  (which it asks for, as CA refuses an item without one). An error the item had stays allowed when it is renamed.
 
 ## 0.3.0 (2026-10-09)
 

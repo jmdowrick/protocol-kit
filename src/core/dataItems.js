@@ -10,8 +10,9 @@ import { LEGACY_KEYS, readOperation } from './predictionValidation.js'
 
 // How a file may spell "no marker", as CA reads a plot_type.
 const NO_PLOT_SPELLINGS = ['None', 'none', 'NONE', 'null', 'Null']
-// The keys circulatory_autogen requires of every data item, written whether or not they changed.
-const REQUIRED_FIELDS = ['name', 'dataType', 'unit', 'operands']
+// The keys circulatory_autogen requires of every data item, written whether or not they changed. A unit an item lacks
+// stays missing until one is given, so CA's error for it stays, rather than a unit of '' it accepts.
+const REQUIRED_FIELDS = ['name', 'dataType', 'operands']
 // The indices CA reads as integers: pandas makes a column of them floats, which CA refuses, unless every item has one.
 const INDEX_KEYS = ['experiment_idx', 'subexperiment_idx']
 
@@ -193,7 +194,7 @@ export function buildDataItem(row) {
   const original = isMapping(row.original) ? row.original : null
   const before = original ? readDataItem(original) : null
   const item = original ? migrateLegacyKeys(copy(original)) : {}
-  const keyOf = { name: 'data_item_name', dataType: 'data_type', unit: 'unit', operands: 'operands' }
+  const keyOf = { name: 'data_item_name', dataType: 'data_type', operands: 'operands' }
   for (const [field, write] of Object.entries(WRITERS)) {
     const isUnchanged = before && isSame(before[field], row[field]) && (!DEPENDS_ON[field] || isSame(before[DEPENDS_ON[field]], row[DEPENDS_ON[field]]))
     const isRequired = REQUIRED_FIELDS.includes(field) && !Object.hasOwn(item, keyOf[field])

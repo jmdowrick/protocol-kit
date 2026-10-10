@@ -111,9 +111,9 @@ describe('ProtocolDataItemsEditor, summary', () => {
     expect(wrapper.find('.p-message').exists()).toBe(false)
   })
 
-  it('says when there are none', () => {
+  it('shows nothing when there are none, as nothing can be done there', () => {
     mountItems({ protocol_info: DOCUMENT.protocol_info }, { columns: 'summary' })
-    expect(wrapper.find('.data-items-empty').text()).toBe('No data items.')
+    expect(wrapper.find('.data-items-editor').exists()).toBe(false)
   })
 
   it('edits only the columns shown, when the host makes it editable', async () => {
@@ -233,6 +233,105 @@ describe('ProtocolDataItemsEditor, all columns', () => {
     const options = (label) => wrapper.findAllComponents(Select).find((entry) => entry.props('ariaLabel') === label).props('options').map(({ value }) => value)
     expect(options('Operation')).toEqual(['', 'max', 'my_op'])
     expect(options('Cost')).toEqual(['', 'MSE'])
+  })
+
+  it('keeps the other items as they are while the form is open, and closes it when its item changes under it', async () => {
+    const third = { ...PEAK, data_item_name: 'V_third' }
+    mountItems({ ...DOCUMENT, data_items: [PEAK, SERIES, third] })
+    await wrapper.find('button[aria-label="Edit data item V_series"]').trigger('click')
+    expect(wrapper.find('button[aria-label="Remove data item V_peak"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('button[aria-label="Edit data item V_third"]').attributes('disabled')).toBeDefined()
+    await wrapper.setProps({ document: { ...DOCUMENT, data_items: [SERIES, third] } })
+    expect(wrapper.find('form').exists()).toBe(false)
+    expect(emittedDocuments()).toEqual([])
+  })
+
+  it('cancels without a change', async () => {
+    mountItems(DOCUMENT)
+    await wrapper.find('button[aria-label="Edit data item V_peak"]').trigger('click')
+    await type('Data item name', 'V_max')
+    await wrapper.findAll('button').find((button) => button.text() === 'Cancel').trigger('click')
+    expect(wrapper.find('form').exists()).toBe(false)
+    expect(emittedDocuments()).toEqual([])
+    expect(wrapper.find('button[aria-label="Remove data item V_peak"]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('renames an item with an error it already had, which is not new', async () => {
+    const broken = { ...PEAK, value: [1, 2] }
+    mountItems({ ...DOCUMENT, data_items: [broken] })
+    expect(wrapper.find('.data-item .p-message-error').exists()).toBe(true)
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await wrapper.find('button[aria-label="Edit data item V_peak"]').trigger('click')
+    // A constant's list is edited as text, not in a number field.
+    expect(wrapper.find('input[aria-label="Values, separated by commas"]').element.value).toBe('1, 2')
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
+    await type('Data item name', 'V_max')
+    expect(wrapper.find('button[type="submit"]').attributes('disabled')).toBeUndefined()
+    await submit()
+    expect(emittedDocuments()[0].data_items[0]).toEqual({ ...broken, data_item_name: 'V_max' })
+  })
+
+  it("keeps a series' gaps and nesting when its values are left alone", async () => {
+    const gappy = { ...SERIES, value: [1, null, 3], std: [0.25] }
+    const nested = { ...SERIES, data_item_name: 'V_nested', value: [[1], [2]] }
+    mountItems({ ...DOCUMENT, data_items: [gappy, nested] })
+    await wrapper.find('button[aria-label="Edit data item V_series"]').trigger('click')
+    await type('Comment', 'gappy')
+    await submit()
+    await wrapper.find('button[aria-label="Edit data item V_nested"]').trigger('click')
+    await type('Comment', 'nested')
+    await submit()
+    expect(emittedDocuments()[0].data_items[0]).toEqual({ ...gappy, comment: 'gappy' })
+    expect(emittedDocuments()[1].data_items[1]).toEqual({ ...nested, comment: 'nested' })
+  })
+
+  it('keeps values it cannot edit, as those read from files', async () => {
+    const fromFiles = { data_item_name: 'V_trace', data_type: 'series', unit: 'mV', operands: ['membrane/V'], source: { file: 'trace.csv' }, obs_dt: 0.1, experiment_idx: 0, subexperiment_idx: 0 }
+    const frequency = { data_item_name: 'V_freq', data_type: 'frequency', unit: 'mV', operands: ['membrane/V'], value: [1, 2], std: [0.1, 0.2], frequencies: [1, 10], experiment_idx: 0, subexperiment_idx: 0 }
+    mountItems({ ...DOCUMENT, data_items: [fromFiles, frequency] })
+    await wrapper.find('button[aria-label="Edit data item V_trace"]').trigger('click')
+    expect(wrapper.find('.data-item-form').text()).toContain('Its values are read from files, and kept as they are.')
+    await type('Comment', 'files')
+    await submit()
+    await wrapper.find('button[aria-label="Edit data item V_freq"]').trigger('click')
+    expect(wrapper.find('.data-item-form').text()).toContain("A frequency's values are kept as they are.")
+    await type('Comment', 'frequency')
+    await submit()
+    expect(emittedDocuments()[0].data_items[0]).toEqual({ ...fromFiles, comment: 'files' })
+    expect(emittedDocuments()[1].data_items[1]).toEqual({ ...frequency, comment: 'frequency' })
+  })
+
+  it("edits a distribution cost's prob_dist_params as JSON", async () => {
+    mountItems(DOCUMENT)
+    await wrapper.find('button[aria-label="Edit data item V_peak"]').trigger('click')
+    await choose('Cost', 'kernel_density_estimation')
+    await wrapper.find('textarea[aria-label="Distribution, as JSON"]').setValue('{"samples": [1,')
+    await flushPromises()
+    expect(wrapper.find('.data-item-form').text()).toContain('Enter the distribution as a JSON object.')
+    await wrapper.find('textarea[aria-label="Distribution, as JSON"]').setValue('{"samples": [1, 2]}')
+    await flushPromises()
+    await submit()
+    expect(emittedDocuments()[0].data_items[0]).toMatchObject({ cost_type: 'kernel_density_estimation', prob_dist_params: { samples: [1, 2] } })
+  })
+
+  it('keeps the sub-experiment within the experiment chosen', async () => {
+    mountItems(DOCUMENT)
+    await wrapper.find('button[aria-label="Edit data item V_series"]').trigger('click')
+    await choose('Experiment', 1)
+    await submit()
+    expect(emittedDocuments()[0].data_items[1]).toEqual({ ...SERIES, experiment_idx: 1, subexperiment_idx: 0 })
+  })
+
+  it('asks for the unit an item lacks', async () => {
+    const { unit, ...unitless } = PEAK
+    mountItems({ ...DOCUMENT, data_items: [unitless] })
+    await wrapper.find('button[aria-label="Edit data item V_peak"]').trigger('click')
+    await type('Comment', 'peak')
+    expect(wrapper.find('.data-item-form').text()).toContain('Give the unit.')
+    await type('Unit', unit)
+    await submit()
+    expect(emittedDocuments()[0].data_items[0]).toEqual({ ...unitless, comment: 'peak', unit })
   })
 
   it('removes an item once confirmed', async () => {
