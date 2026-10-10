@@ -1,5 +1,5 @@
 /**
- * Computes the operations an output can take as circulatory_autogen's own funcs do (operation_funcs.py,
+ * Computes the operations a feature can take as circulatory_autogen's own funcs do (operation_funcs.py,
  * operation_funcs_user.py, numpy's math backend): the same samples, the same NaNs and errors, and means summed in
  * numpy's order, so each value is the one CA gives, to the last bit.
  */
@@ -139,19 +139,33 @@ function readIndex(fraction, last) {
 }
 
 /**
- * Takes the samples `x[int(start_frac * (n - 1)):int(end_frac * (n - 1))]` as Python slices them: a negative index
- * counts from the end, and an index past either end stops there.
+ * Finds the samples `x[int(start_frac * (n - 1)):int(end_frac * (n - 1))]` takes of n, as Python slices them: a
+ * negative index counts from the end, and an index past either end stops there. A host draws a feature over them.
+ *
+ * @param {number} count - n.
+ * @param {Object} [kwargs] - With start_frac and end_frac, as numbers or as an item's operation_kwargs has them; CA's
+ *   defaults are 0 and 1.
+ * @returns {{start: number, end: number}} The first sample's index, and the one after the last; equal when it takes
+ *   none.
+ * @throws {OperationError} For a fraction Python can't read as an index.
+ */
+export function sliceRangeBounds(count, { start_frac: startFrac = 0, end_frac: endFrac = 1 } = {}) {
+  const clamp = (index) => Math.min(Math.max(index < 0 ? index + count : index, 0), count)
+  const start = clamp(readIndex(startFrac, count - 1))
+  const end = clamp(readIndex(endFrac, count - 1))
+  return { start, end: Math.max(start, end) }
+}
+
+/**
+ * Takes the samples `x[int(start_frac * (n - 1)):int(end_frac * (n - 1))]`, as sliceRangeBounds finds them.
  *
  * @param {ArrayLike<number>} values
  * @param {Object} kwargs - With start_frac and end_frac; CA's defaults are 0 and 1.
  * @returns {ArrayLike<number>}
  */
-export function sliceRange(values, { start_frac: startFrac = 0, end_frac: endFrac = 1 } = {}) {
-  const count = values.length
-  const clamp = (index) => Math.min(Math.max(index < 0 ? index + count : index, 0), count)
-  const start = clamp(readIndex(startFrac, count - 1))
-  const end = clamp(readIndex(endFrac, count - 1))
-  return Array.prototype.slice.call(values, start, Math.max(start, end))
+export function sliceRange(values, kwargs = {}) {
+  const { start, end } = sliceRangeBounds(values.length, kwargs)
+  return Array.prototype.slice.call(values, start, end)
 }
 
 /**
@@ -231,12 +245,13 @@ function checkKwargs(operation, kwargs, name) {
  * @param {Object} [options]
  * @param {string} [options.name] - The item's data_item_name, for messages.
  * @param {Map<string, number>} [options.computed] - The values of the items computed before it, by name.
- * @param {Set<string>} [options.itemNames] - Every prediction item's name: one not yet computed can't be used.
+ * @param {Set<string>} [options.itemNames] - Every item's name: one not yet computed can't be used.
+ * @param {string} [options.kind] - What the item is, for messages: 'prediction item' or 'data item'.
  * @returns {number}
  * @throws {OperationError} Where CA raises.
  */
-export function applyOperation(operation, operands, kwargs = {}, { name = 'item', computed = new Map(), itemNames = new Set() } = {}) {
-  if (!isComputedOperation(operation)) throw new OperationError(`prediction item '${name}': operation ${formatPythonRepr(operation)} is not one protocol-kit computes.`)
+export function applyOperation(operation, operands, kwargs = {}, { name = 'item', computed = new Map(), itemNames = new Set(), kind = 'prediction item' } = {}) {
+  if (!isComputedOperation(operation)) throw new OperationError(`${kind} '${name}': operation ${formatPythonRepr(operation)} is not one protocol-kit computes.`)
   const raw = kwargs && typeof kwargs === 'object' && !Array.isArray(kwargs) ? kwargs : {}
   checkKwargs(operation, raw, name)
   const resolved = {}
@@ -250,7 +265,7 @@ export function applyOperation(operation, operands, kwargs = {}, { name = 'item'
     } else resolved[key] = value
   }
   if (operands.length !== 1) {
-    throw new OperationError(`prediction item '${name}': ${operation} takes one operand, got ${operands.length}.`, 'TypeError')
+    throw new OperationError(`${kind} '${name}': ${operation} takes one operand, got ${operands.length}.`, 'TypeError')
   }
   return OPERATIONS[operation].compute(operands[0], resolved)
 }

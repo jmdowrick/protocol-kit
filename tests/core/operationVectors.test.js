@@ -3,7 +3,7 @@ import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-import { OperationError, applyOperation, computeMean, sliceRange, sumPairwise } from '../../src/core/operations.js'
+import { OperationError, applyOperation, computeMean, sliceRange, sliceRangeBounds, sumPairwise } from '../../src/core/operations.js'
 
 const RESOURCES = join(__dirname, '../resources')
 // What circulatory_autogen's own operation funcs give for each case (scripts/generate_operation_vectors.py).
@@ -67,6 +67,23 @@ describe('sumPairwise', () => {
   it('makes a sum of negative zeros 0, and a mean of nothing NaN', () => {
     expect(Object.is(computeMean([-0, -0]), 0)).toBe(true)
     expect(computeMean([])).toBeNaN()
+  })
+})
+
+describe('sliceRangeBounds', () => {
+  it.each(VECTORS.bounds.map((vector) => [`${vector.count} samples, ${JSON.stringify(vector.operation_kwargs)}`, vector]))("takes the samples CA's own funcs take of %s", (_, vector) => {
+    if (vector.error) {
+      expect(() => sliceRangeBounds(vector.count, vector.operation_kwargs)).toThrow(OperationError)
+      return
+    }
+    const { start, end } = sliceRangeBounds(vector.count, vector.operation_kwargs)
+    if (vector.empty) expect(end).toBe(start)
+    else expect({ start, end }).toEqual({ start: vector.start, end: vector.end })
+  })
+
+  it('covers windows that take samples and windows that take none', () => {
+    expect(VECTORS.bounds.some((vector) => vector.empty)).toBe(true)
+    expect(VECTORS.bounds.filter((vector) => !vector.empty).length).toBeGreaterThan(40)
   })
 })
 
