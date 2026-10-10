@@ -27,7 +27,8 @@
 - `readDataItemsAsCircAutogen` reads data items as circulatory_autogen #536's parser does, with its messages, and
   `validateDataItems` checks each for an editor: kwargs against CA's funcs, references to items computed before it,
   experiments in the protocol, names unique across data and prediction items. `DATA_ITEM_VOCABULARY` holds CA's data
-  types, plot types, default cost, operations and cost funcs; `readObsDataOptions` reads CUFLynx's. Golden vectors
+  types, plot types, default cost, operations and cost funcs; `readObsDataOptions` reads CUFLynx's, a kwarg it calls
+  a string for its None default typed as CA's own are (a number, or an item's name). Golden vectors
   from CA 96ec5c63 (`scripts/generate_data_item_vectors.py`, `tests/resources/data-item-vectors.json`) check them.
 - The editor: a Data items section below the feature plots (`ProtocolDataItemsEditor`), with the columns the host
   chooses (`dataItemColumns`): `'all'` edits every field, as CUFLynx does; `'summary'` lists each item's name,

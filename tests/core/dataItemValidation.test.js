@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { checkDataItemReferences, findCloseMatches, validateDataItems } from '../../src/core/dataItemValidation.js'
-import { DATA_ITEM_VOCABULARY, readObsDataOptions } from '../../src/core/dataItemVocabulary.js'
+import { DATA_ITEM_OPERATIONS, DATA_ITEM_VOCABULARY, readObsDataOptions } from '../../src/core/dataItemVocabulary.js'
 
 const PROTOCOL_INFO = { pre_times: [0, 0], sim_times: [[1, 2], [3]], params_to_change: {} }
 const PEAK = { data_item_name: 'V_peak', data_type: 'constant', unit: 'mV', operands: ['membrane/V'], operation: 'max', value: 20, std: 1.5 }
@@ -145,5 +145,29 @@ describe('readObsDataOptions', () => {
     expect(vocabulary.defaultCostType).toBe('MSE')
     expect(vocabulary.dataTypes).toEqual(['constant', 'series', 'frequency'])
     expect(readObsDataOptions(null)).toBe(DATA_ITEM_VOCABULARY)
+  })
+
+  it('reads a kwarg CUFLynx calls a string for its None default as CA #536 does: a number, or an item for no operands', () => {
+    const vocabulary = readObsDataOptions({
+      operations: ['AHP_minus_steady_state_min', 'difference', 'labelled'],
+      operation_operands: { difference: { names: [], variadic: false } },
+      operation_kwargs_schema: {
+        AHP_minus_steady_state_min: [{ name: 'spike_min_thresh', default: null, type: 'string' }],
+        difference: [{ name: 'subtract_from', default: null, type: 'data_item' }, { name: 'other', default: null, type: 'string' }],
+        labelled: [{ name: 'label', default: 'peak', type: 'string' }, { name: 'is_on', default: true, type: 'boolean' }],
+      },
+    })
+    expect(vocabulary.operations.map(({ kwargs }) => kwargs.map(({ name, type }) => [name, type]))).toEqual([
+      [['spike_min_thresh', 'number']],
+      [
+        ['subtract_from', 'data_item'],
+        ['other', 'data_item'],
+      ],
+      [
+        ['label', 'string'],
+        ['is_on', 'boolean'],
+      ],
+    ])
+    expect(vocabulary.operations[0].kwargs).toEqual(DATA_ITEM_OPERATIONS.find(({ name }) => name === 'AHP_minus_steady_state_min').kwargs)
   })
 })

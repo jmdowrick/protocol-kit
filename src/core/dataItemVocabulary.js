@@ -150,6 +150,20 @@ export const DATA_ITEM_VOCABULARY = {
 }
 
 /**
+ * Reads a keyword argument of CUFLynx's options. CUFLynx calls one whose default is None a string, which an editor
+ * would write as text, so its type is worked out as CA's own are (describeKwarg).
+ *
+ * @param {{name: string, default: *, type: string}} kwarg
+ * @param {boolean} takesNoOperands
+ * @returns {{name: string, default: *, type: string}}
+ */
+function readOptionKwarg({ name, default: value, type }, takesNoOperands) {
+  if (type === 'integer') return { name, default: value ?? null, type: 'number' }
+  if (type === 'string' && typeof value !== 'string') return describeKwarg(name, value ?? null, takesNoOperands)
+  return { name, default: value ?? null, type }
+}
+
+/**
  * Reads the options CUFLynx's API gives its obs_data editor (`GET /api/obs_data/options`: its CA's funcs, the user's
  * included) as a vocabulary the editor takes. What it leaves out is CA #536's.
  *
@@ -169,10 +183,11 @@ export function readObsDataOptions(options) {
     .map((name) => {
       const own = builtIn(DATA_ITEM_OPERATIONS, name)
       const operands = operandsOf[name]
+      const names = Array.isArray(operands?.names) ? operands.names : (own?.operands ?? [])
       return {
         name,
-        operands: Array.isArray(operands?.names) ? operands.names : (own?.operands ?? []),
-        kwargs: Array.isArray(kwargsOf[name]) ? kwargsOf[name].map(({ name: kwarg, default: value, type }) => ({ name: kwarg, default: value ?? null, type: type === 'integer' ? 'number' : type })) : (own?.kwargs ?? []),
+        operands: names,
+        kwargs: Array.isArray(kwargsOf[name]) ? kwargsOf[name].map((kwarg) => readOptionKwarg(kwarg, !names.length)) : (own?.kwargs ?? []),
         acceptsAny: !!operands?.variadic,
         differentiable: name in differentiable ? !!differentiable[name] : !!own?.differentiable,
       }
