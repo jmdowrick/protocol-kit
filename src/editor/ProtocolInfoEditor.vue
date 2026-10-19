@@ -221,11 +221,10 @@
         :traces="protocolInfo?.protocol_traces ?? {}"
         :units="editing.units"
         :colour="colour"
-        :pre-time="experiment?.preTime ?? 0"
-        :can-align="!!editing && isEarly(editing.cell, editing.sub)"
+        :pre-time="editing.sub === 0 ? (experiment?.preTime ?? 0) : 0"
+        :early="editing.isEarly"
         :previous-end="editing.previousEnd"
         @apply="applyCell"
-        @align="alignCell"
         @cancel="cellPopover.hide()"
       />
     </Popover>
@@ -270,7 +269,6 @@ import {
   addExperiment,
   addParameter,
   addSubExperiment,
-  alignWithWarmUp,
   ensureProtocol,
   findEndValue,
   findObservationsAt,
@@ -278,11 +276,11 @@ import {
   removeExperiment,
   removeParameter,
   removeSubExperiment,
-  setInput,
+  setInputFromSubExperimentStart,
   setTiming,
   setValue,
 } from '../core/protocolEditing.js'
-import { changesDuringWarmUp, findParametersAtModelValues, nameExperiment, readProtocolInfo } from '../core/protocolModel.js'
+import { changesDuringWarmUp, findParametersAtModelValues, nameExperiment, readFromSubExperimentStart, readProtocolInfo } from '../core/protocolModel.js'
 import { findValueRange, sampleInput, writePolylinePoints } from '../core/protocolPreview.js'
 import { validateProtocolInfo } from '../core/protocolValidation.js'
 
@@ -811,7 +809,11 @@ function openKindMenu(event, parameter, { cell, sub, kind }) {
  */
 function openCell(anchor, parameter, cell, sub, kind = null) {
   const units = unitsByPath.value.get(parameter) ?? ''
-  editing.value = { key: ++editCount, parameter, cell, sub, kind, duration: experiment.value.subs[sub].duration, units, previousEnd: findPreviousEnd(parameter, sub) }
+  const { preTime, subs } = experiment.value
+  const duration = subs[sub].duration
+  // Times are from the start of the sub-experiment, the first one's too, whose clock CA starts with the warm-up.
+  const shown = sub === 0 ? readFromSubExperimentStart(cell, preTime, duration) : cell
+  editing.value = { key: ++editCount, parameter, cell: shown, sub, kind, duration, units, isEarly: isEarly(cell, sub), previousEnd: findPreviousEnd(parameter, sub) }
   // Once the click is over, or it closes the popover again.
   setTimeout(() => cellPopover.value?.show({ currentTarget: anchor }, anchor), 0)
 }
@@ -825,18 +827,11 @@ function applyCell({ value, shape, trace, traceName }) {
   const { parameter, sub } = editing.value
   touchParameter(parameter)
   const where = { parameter, experiment: current.value, sub }
-  if (shape || trace) edit(setInput, { ...where, shape, trace })
+  if (shape || trace) edit(setInputFromSubExperimentStart, { ...where, shape, trace })
   else edit(setValue, { ...where, value: traceName ?? value })
   cellPopover.value.hide()
 }
 
-/** Starts the edited input with its sub-experiment rather than with the warm-up. */
-function alignCell() {
-  const { parameter, cell } = editing.value
-  touchParameter(parameter)
-  edit(alignWithWarmUp, { parameter, experiment: current.value, ...(cell.kind === 'shape' ? { shape: cell.shape } : { trace: cell.trace }) })
-  cellPopover.value.hide()
-}
 </script>
 
 <style scoped>

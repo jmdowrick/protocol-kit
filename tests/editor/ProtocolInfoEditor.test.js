@@ -348,6 +348,45 @@ describe('ProtocolInfoEditor, parameters at their model values', () => {
   })
 })
 
+describe('ProtocolInfoEditor, times in the first sub-experiment', () => {
+  // A 2 s warm-up, then sub-experiments of 4 s and 3 s; the clamp is off its model value, so its lane shows.
+  const withWarmUp = (extra = {}) => ({
+    protocol_info: { pre_times: [2], sim_times: [[4, 3]], params_to_change: { 'membrane/V_clamp': [[-70, -70]] }, ...extra },
+  })
+  const openFirst = async () => {
+    await wrapper.find('[aria-label="Change how membrane/V_clamp varies in sub-experiment 1"]').trigger('click')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await flushPromises()
+    return wrapper.findComponent(ProtocolCellEditor)
+  }
+
+  it('writes a step from the start of the sub-experiment, without asking, and shows it so again', async () => {
+    mountEditor(withWarmUp())
+    let cellEditor = await openFirst()
+    cellEditor.vm.$emit('apply', { shape: { baseline: -70, events: [{ level: 0, start: 1, length: 3 }] } })
+    await flushPromises()
+    const [edited] = emittedDocuments()
+    const name = edited.protocol_info.params_to_change['membrane/V_clamp'][0][0]
+    // CA's clock starts with the warm-up, so the step is written 2 s later and held at -70 through the warm-up
+    expect(edited.protocol_info.protocol_shapes[name]).toEqual({ baseline: -70, duration: 6, events: [{ level: 0, start: 3, length: 3, period: 0, multiplier: 0 }] })
+    await wrapper.setProps({ document: edited })
+    cellEditor = await openFirst()
+    expect(cellEditor.props('cell').form).toEqual({ type: 'step', baseline: -70, level: 0, start: 1 })
+    expect(cellEditor.text()).toContain('Times are from the start of the sub-experiment')
+    expect(cellEditor.text()).not.toContain('Start it with the sub-experiment')
+  })
+
+  it("says when the file's input starts with the warm-up, and still asks nothing", async () => {
+    mountEditor(withWarmUp({
+      params_to_change: { 'membrane/V_clamp': [['early', -70]] },
+      protocol_shapes: { early: { baseline: -70, events: [{ level: 0, start: 1, length: 1 }] } },
+    }))
+    const cellEditor = await openFirst()
+    expect(cellEditor.text()).toContain('This starts with the warm-up, 2 s before the sub-experiment')
+    expect(cellEditor.findAll('button').map((button) => button.text())).not.toContain('Start it with the sub-experiment')
+  })
+})
+
 describe('VariablePicker', () => {
   it('searches the variables given, keeping those the filter keeps, and emits the one picked', async () => {
     wrapper = mount(VariablePicker, {
