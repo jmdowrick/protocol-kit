@@ -3,7 +3,7 @@
  * renumbers the observations that refer to experiments and sub-experiments by their place, so none points at the
  * wrong one after a change.
  */
-import { findPlotsLosingInput, followSubExperimentRemoval, listPredictionPlots } from './predictionPlots.js'
+import { findPlotsLosingInput, followSubExperimentRemoval, listPredictionPlots, renumberPlotExperiments } from './predictionPlots.js'
 import { buildShapeFromForm, nameExperiment, readShapeForm } from './protocolModel.js'
 import { interpolateTrace } from './protocolPreview.js'
 import { PACING, expandShape, isMapping, normaliseShape } from './protocolShapes.js'
@@ -57,8 +57,8 @@ function editDocument(document, edit) {
 }
 
 /**
- * Renumbers the observations after an experiment's place changes, dropping those of a removed one. An observation
- * without an index is in experiment 0, as CA reads it.
+ * Renumbers the observations, and the experiments plots name, after an experiment's place changes, dropping those of a
+ * removed one. An observation without an index is in experiment 0, as CA reads it.
  *
  * @param {Object} document
  * @param {Function} renumber - Gives an experiment's new index, or null when it is gone.
@@ -72,6 +72,7 @@ function renumberExperiments(document, renumber) {
       return next === (item.experiment_idx ?? 0) ? [item] : [{ ...item, experiment_idx: next }]
     })
   }
+  renumberPlotExperiments(document, renumber)
 }
 
 /**
