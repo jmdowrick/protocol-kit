@@ -269,7 +269,8 @@ it is left out; `computePlotSeries` gives them no points, as they draw a run's t
 experiments. `validatePredictionPlots` checks what CA does: each kind's keys and no others, a name of its own, the
 kind, and for the feature kinds the `x` it takes, groups that exist, are features (an operation, not a series) and
 have one item per experiment, `x` and `y` over the same experiments, and inputs set to a number or a trace in that
-sub-experiment of each experiment, with a reduce CA knows; for the others, an input `params_to_change` sets, an output
+sub-experiment of each experiment, with a reduce CA knows (its `at` no later than the end of a sub-experiment
+where the input is a trace); for the others, an input `params_to_change` sets, an output
 and experiments the protocol has. `plotWarnings` names a trace read without a reduce. Removing or moving an experiment
 renumbers the `experiments` a plot names; one left with none goes. Removing a sub-experiment moves an
 input reference down with it where every point is in that experiment; where one index can no longer name the same

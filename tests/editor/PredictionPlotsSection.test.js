@@ -185,6 +185,33 @@ describe('PredictionPlotsSection', () => {
     expect(lastDocument().prediction_plots[0].x).toEqual({ params_to_change: 'clamp/V_cmd', subexperiment_idx: 1 })
   })
 
+  it("edits a series' reduce as x's, keeping it as the series' input or sub-experiment changes", async () => {
+    const series = { params_to_change: 'clamp/V_cmd', subexperiment_idx: 1, reduce: 'max' }
+    mountSection({ ...DOCUMENT, prediction_plots: [{ ...DOCUMENT.prediction_plots[0], series }] })
+    const field = (label) => rows()[0].find(`[aria-label="${label}"]`)
+    expect(field('series reduce').element.value).toBe('max')
+    expect(rows()[0].findAll('[aria-label="series reduce"] option').map((option) => option.element.value)).toEqual(['', 'final', 'mean', 'max', 'min', 'at'])
+    expect(field('series at').exists()).toBe(false)
+    // Another series keeps the reduce read from the file.
+    await change(rows()[0], 'series', JSON.stringify(['clamp/V_cmd', 0]))
+    expect(lastDocument().prediction_plots[0].series).toEqual({ ...series, subexperiment_idx: 0 })
+    await change(rows()[0], 'series reduce', 'at')
+    expect(lastDocument().prediction_plots[0].series).toEqual({ ...series, reduce: { at: 0 } })
+    await wrapper.setProps({ document: lastDocument() })
+    expect(field('series at').element.value).toBe('0')
+    await change(rows()[0], 'series at', '7.5')
+    expect(lastDocument().prediction_plots[0].series).toEqual({ ...series, reduce: { at: 7.5 } })
+    await change(rows()[0], 'series reduce', '')
+    expect(lastDocument().prediction_plots[0].series).toEqual({ params_to_change: 'clamp/V_cmd', subexperiment_idx: 1 })
+    // x is untouched by the series' reduce.
+    expect(lastDocument().prediction_plots[0].x).toEqual(DOCUMENT.prediction_plots[0].x)
+    // No series, no reduce for it.
+    await change(rows()[0], 'series', '')
+    expect(lastDocument().prediction_plots[0].series).toBe(null)
+    await wrapper.setProps({ document: lastDocument() })
+    expect(field('series reduce').exists()).toBe(false)
+  })
+
   it("edits input_and_output's input, output and experiments, all of them leaving experiments out", async () => {
     const plot = { name: 'V', kind: 'input_and_output', input: { params_to_change: 'clamp/V_cmd' }, output: 'membrane/V' }
     mountSection({ ...DOCUMENT, prediction_plots: [plot] })

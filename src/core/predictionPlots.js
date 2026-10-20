@@ -302,7 +302,8 @@ function checkReduce(axis, reduce) {
 
 /**
  * Checks a reference to an input's value: its keys, that protocol_info sets the input, and that it is set in the
- * sub-experiment in each experiment, to a number or a trace (which `reduce` turns into one).
+ * sub-experiment in each experiment, to a number or a trace (which `reduce` turns into one, reading `{at}` no later
+ * than the sub-experiment's end, as CA does).
  *
  * @param {string} axis - 'x' or 'series'.
  * @param {*} reference
@@ -328,7 +329,13 @@ function checkInputReference(axis, reference, info, experiments) {
     const subs = Array.isArray(info.sim_times?.[experiment]) ? info.sim_times[experiment].length : 0
     if (!(sub >= 0 && sub < subs)) return [`${axis}'s subexperiment_idx ${sub} is not a sub-experiment of experiment_idx ${experiment}, which has ${subs}.`]
     const value = rows[experiment]?.[sub]
-    if ((typeof value === 'number' && Number.isFinite(value)) || typeof value === 'string') return []
+    if (typeof value === 'number' && Number.isFinite(value)) return []
+    if (typeof value === 'string') {
+      const duration = info.sim_times[experiment][sub]
+      const at = isMapping(reference.reduce) ? reference.reduce.at : null
+      if (at == null || typeof duration !== 'number' || !(at > duration)) return []
+      return [`${axis}'s reduce at ${at} s is after the end of sub-experiment ${sub} of experiment_idx ${experiment}, which is ${duration} s long.`]
+    }
     return [`${axis} reads ${formatPythonRepr(key)} in experiment_idx ${experiment}, sub-experiment ${sub}, which is ${formatPythonRepr(value ?? null)}: neither a number nor a trace.`]
   })
 }

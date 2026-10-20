@@ -37,34 +37,26 @@
                 <template v-else>
                   <label class="od-field">
                     x input
-                    <select :value="plot.x?.params_to_change" aria-label="x input" @change="(event) => editX(index, { params_to_change: event.target.value })">
+                    <select :value="plot.x?.params_to_change" aria-label="x input" @change="(event) => editInput(index, 'x', { params_to_change: event.target.value })">
                       <option v-for="key in withOwn(inputKeys, plot.x?.params_to_change)" :key="key" :value="key">{{ key }}</option>
                     </select>
                   </label>
                   <label class="od-field">
                     sub-experiment
-                    <select :value="plot.x?.subexperiment_idx" aria-label="x sub-experiment" @change="(event) => editX(index, { subexperiment_idx: Number(event.target.value) })">
+                    <select :value="plot.x?.subexperiment_idx" aria-label="x sub-experiment" @change="(event) => editInput(index, 'x', { subexperiment_idx: Number(event.target.value) })">
                       <option v-for="sub in withOwn(subIndices, plot.x?.subexperiment_idx)" :key="sub" :value="sub">{{ sub }}</option>
                     </select>
                   </label>
-                  <label class="od-field">
-                    reduce
-                    <select :value="reduceChoice(plot.x)" aria-label="x reduce" @change="(event) => changeReduce(index, event.target.value)">
-                      <option v-for="choice in REDUCE_CHOICES" :key="choice.value" :value="choice.value">{{ choice.label }}</option>
-                    </select>
-                  </label>
-                  <label v-if="reduceChoice(plot.x) === AT" class="od-field">
-                    at (s)
-                    <input type="number" min="0" step="any" :value="plot.x.reduce.at" aria-label="x at" @change="(event) => changeAt(index, event.target.value)" />
-                  </label>
+                  <InputReduceFields :reference="plot.x" axis="x" @update:reduce="(reduce) => editInput(index, 'x', { reduce })" />
                 </template>
                 <label class="od-field">
                   series
-                  <select :value="encodeInput(plot.series)" aria-label="series" @change="(event) => edit(index, { series: decodeInput(event.target.value) })">
+                  <select :value="encodeInput(plot.series)" aria-label="series" @change="(event) => changeSeries(index, event.target.value)">
                     <option :value="NONE">(none)</option>
                     <option v-for="input in withOwn(inputs, plot.series)" :key="encodeInput(input)" :value="encodeInput(input)">{{ describeAxis(input) }}</option>
                   </select>
                 </label>
+                <InputReduceFields v-if="isInputReference(plot.series)" :reference="plot.series" axis="series" @update:reduce="(reduce) => editInput(index, 'series', { reduce })" />
               </template>
               <template v-else-if="isOutputKind(plot.kind)">
                 <label class="od-field">
@@ -118,7 +110,7 @@
  * The prediction_plots of an obs_data document, a row each: its name, its kind (a dropdown of the four CA draws) and
  * that kind's settings alone. feature_vs_feature takes y and x, groups of features (an item_name_for_plotting), and a
  * series; feature_vs_input takes y, an input in a sub-experiment as x, how a trace there becomes one number (reduce),
- * and a series; input_and_output and output_vs_input take an input, a model output (picked from the host's variables
+ * and a series, an input with its own reduce; input_and_output and output_vs_input take an input, a model output (picked from the host's variables
  * when it gives them) and the experiments drawn, all when every box is ticked. Choosing a kind writes its keys alone.
  * Each plot is checked as CA does, its errors and warnings under its row.
  */
@@ -128,7 +120,6 @@ import Button from 'primevue/button'
 
 import './obsDataRows.css'
 import {
-  INPUT_REDUCTIONS,
   PREDICTION_PLOT_KINDS,
   addPredictionPlot,
   isInputReference,
@@ -142,13 +133,11 @@ import {
 } from '../core/predictionPlots.js'
 import { nameExperiment } from '../core/protocolModel.js'
 import { isMapping } from '../core/protocolShapes.js'
+import InputReduceFields from './InputReduceFields.vue'
 import VariableCell from './VariableCell.vue'
 
-// The value of series' option for none, and of reduce's.
+// The value of series' option for none.
 const NONE = ''
-// The value of reduce's option for a time.
-const AT = 'at'
-const REDUCE_CHOICES = [{ value: NONE, label: '(none)' }, ...INPUT_REDUCTIONS.map((value) => ({ value, label: value })), { value: AT, label: 'at a time' }]
 
 const props = defineProps({
   // The obs_data document.
@@ -267,45 +256,29 @@ const emitDocument = (document) => emit('update:document', document)
 const edit = (index, change) => emitDocument(updatePredictionPlot(props.document, index, change))
 
 /**
- * Changes a feature_vs_input plot's x, keeping the rest of it.
+ * Changes a plot's x or series, an input reference, keeping the rest of it, its reduce too.
  *
  * @param {number} index
+ * @param {'x'|'series'} axis
  * @param {Object} change - Any of params_to_change, subexperiment_idx and reduce; reduce null drops it.
  */
-function editX(index, change) {
-  const current = isInputReference(plots.value[index].x) ? plots.value[index].x : (inputs.value[0] ?? {})
-  const x = { ...current, ...change }
-  if (x.reduce == null) delete x.reduce
-  edit(index, { x })
+function editInput(index, axis, change) {
+  const current = isInputReference(plots.value[index][axis]) ? plots.value[index][axis] : (inputs.value[0] ?? {})
+  const reference = { ...current, ...change }
+  if (reference.reduce == null) delete reference.reduce
+  edit(index, { [axis]: reference })
 }
 
 /**
- * Which reduce option an input reference has chosen.
- *
- * @param {*} reference
- * @returns {string}
- */
-const reduceChoice = (reference) => (reference?.reduce == null ? NONE : isMapping(reference.reduce) ? AT : reference.reduce)
-
-/**
- * Chooses how a feature_vs_input plot's x becomes one number: none, one of INPUT_REDUCTIONS, or at a time, 0 s first.
+ * Chooses a plot's series from its dropdown: none, or an input in a sub-experiment, keeping its reduce.
  *
  * @param {number} index
- * @param {string} choice
+ * @param {string} value
  */
-function changeReduce(index, choice) {
-  editX(index, { reduce: choice === NONE ? null : choice === AT ? { at: 0 } : choice })
-}
-
-/**
- * Sets the time a feature_vs_input plot reads its x at, in seconds from the start of the sub-experiment.
- *
- * @param {number} index
- * @param {string} text
- */
-function changeAt(index, text) {
-  if (text.trim() === '' || !Number.isFinite(Number(text))) return
-  editX(index, { reduce: { at: Number(text) } })
+function changeSeries(index, value) {
+  const series = decodeInput(value)
+  if (series == null) edit(index, { series: null })
+  else editInput(index, 'series', series)
 }
 
 /**
@@ -401,7 +374,7 @@ function add() {
   min-width: 0;
 }
 
-.od-plot-settings > .od-field {
+.od-plot-settings > :deep(.od-field) {
   flex: 1 1 7rem;
 }
 

@@ -380,6 +380,29 @@ describe('the kinds CA #591 draws', () => {
     expect(computePlotSeries(withPlots([reduced]), computeFeatures(DOCUMENT, SEGMENTS))[0].points.map(({ x }) => x)).toEqual([-40, -20, 0])
   })
 
+  it("refuses a reduce at past the end of a sub-experiment where the input is a trace, as CA does, for x and series", () => {
+    const info = structuredClone(DOCUMENT.protocol_info)
+    info.params_to_change['clamp/V_cmd'][1][1] = 'step_e1'
+    info.protocol_traces = { step_e1: { t: [0, 50], values: [-20, -20] } }
+    const plot = (name, x, series = null) => ({ name, kind: 'feature_vs_input', x, y: 'I_peak', series })
+    const document = withPlots(
+      [
+        plot('end', { ...STEP(), reduce: { at: 50 } }),
+        plot('after', { ...STEP(), reduce: { at: 60.5 } }),
+        plot('series', STEP(), { ...STEP(), reduce: { at: 51 } }),
+        // A number ignores reduce, so its at is never checked.
+        plot('number', { ...STEP(0), reduce: { at: 60 } }),
+      ],
+      { protocol_info: info }
+    )
+    expect(validatePredictionPlots(document).plotErrors).toEqual([
+      [],
+      ["prediction_plots[1] ('after'): x's reduce at 60.5 s is after the end of sub-experiment 1 of experiment_idx 1, which is 50 s long."],
+      ["prediction_plots[2] ('series'): series's reduce at 51 s is after the end of sub-experiment 1 of experiment_idx 1, which is 50 s long."],
+      [],
+    ])
+  })
+
   it('gives an input_and_output or output_vs_input plot no points, but its input, output and experiments', () => {
     const { experiments: _, ...all } = OUTPUT
     const [named, everyExperiment] = computePlotSeries(withPlots([OUTPUT, { ...all, name: 'all', kind: 'output_vs_input' }]), [])
