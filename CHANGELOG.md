@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 (2026-10-28)
+
+Breaking: the segment editor, `ProtocolCellEditor`, no longer takes the `canAlign` prop or emits the `align` event,
+and its "Start it with the sub-experiment" button is gone: the editor writes an input's times from the start of its
+sub-experiment itself. A host passing `canAlign` or listening for `align` drops them.
 
 - The editor writes an input's times from the start of its sub-experiment, the first one's too, without asking.
   `setInputFromSubExperimentStart` writes an input as `setInput` does and, in an experiment's first sub-experiment
@@ -27,7 +31,7 @@
   the output (picked from the host's `variables`, which `ObsDataEditor` passes on, else typed) and a box per
   experiment, all ticked leaving `experiments` out. A plot's warnings show under it, in orange.
 
-## 0.5.0 (unreleased)
+## 0.5.0 (2026-10-11)
 
 Breaking: the editor edits an obs_data document as CUFLynx's "Edit obs_data" dialog does, one row per item, and the
 Outputs and their feature plots form are gone.
