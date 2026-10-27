@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- The editor writes an input's times from the start of its sub-experiment, the first one's too, without asking.
+  `setInputFromSubExperimentStart` writes an input as `setInput` does and, in an experiment's first sub-experiment
+  after a warm-up, moves it to start with the sub-experiment, holding its first value through the warm-up
+  (`alignWithWarmUp`). `readFromSubExperimentStart` reads such an input back with the times it was given, for the
+  segment editor. The segment editor's "Start it with the sub-experiment" button and its `canAlign` prop and `align`
+  event are gone; it takes `early` for an input the file has that changes during the warm-up, which it marks.
+
 ## 0.5.0 (unreleased)
 
 Breaking: the editor edits an obs_data document as CUFLynx's "Edit obs_data" dialog does, one row per item, and the

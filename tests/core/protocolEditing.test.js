@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { changesDuringWarmUp, readProtocolInfo, buildShapeFromForm, readShapeForm } from '../../src/core/protocolModel.js'
+import { changesDuringWarmUp, readFromSubExperimentStart, readProtocolInfo, buildShapeFromForm, readShapeForm } from '../../src/core/protocolModel.js'
 import { interpolateTrace } from '../../src/core/protocolPreview.js'
 import { normaliseShape } from '../../src/core/protocolShapes.js'
 import {
@@ -16,6 +16,7 @@ import {
   removeParameter,
   removeSubExperiment,
   setInput,
+  setInputFromSubExperimentStart,
   setTiming,
   setValue,
 } from '../../src/core/protocolEditing.js'
@@ -281,3 +282,82 @@ describe('alignWithWarmUp', () => {
     expect(planOf(trace).warnings).toEqual([])
   })
 })
+
+describe('setInputFromSubExperimentStart', () => {
+  // One experiment: a 2 s warm-up, then sub-experiments of 4 s and 3 s; a/k is 0 throughout.
+  const document = { protocol_info: { pre_times: [2], sim_times: [[4, 3]], params_to_change: { 'a/k': [[0, 0]] } } }
+  /**
+   * Reads a/k in a sub-experiment as CA runs it, and as an editor shows it.
+   *
+   * @param {Object} edited
+   * @param {number} sub
+   * @returns {{cell: Object, shown: Object, valueAt: Function, early: boolean}} `valueAt` takes a time into the
+   *   sub-experiment.
+   */
+  const read = (edited, sub) => {
+    const { protocolInfo } = validateProtocolInfo(edited.protocol_info)
+    const { experiments, controls } = readProtocolInfo(protocolInfo)
+    const [{ preTime, subs }] = experiments
+    const cell = controls[0].cells[0][sub]
+    // CA starts the first sub-experiment's clock with the warm-up.
+    const offset = sub === 0 ? preTime : 0
+    return {
+      cell,
+      shown: sub === 0 ? readFromSubExperimentStart(cell, preTime, subs[sub].duration) : cell,
+      valueAt: (time) => interpolateTrace(cell.trace, offset + time),
+      early: changesDuringWarmUp(cell, preTime, subs[0].duration),
+    }
+  }
+
+  it('runs a step written in the first sub-experiment from the start of the sub-experiment', () => {
+    const step = { type: 'step', baseline: 0, level: 5, start: 1 }
+    const edited = setInputFromSubExperimentStart(document, { parameter: 'a/k', experiment: 0, sub: 0, shape: buildShapeFromForm(step, 4) })
+    expectValid(edited)
+    const { valueAt, early, shown } = read(edited, 0)
+    // the warm-up holds the step's baseline, and the step is at 1 s into the sub-experiment, as typed
+    expect(early).toBe(false)
+    expect([0.5, 1.5, 3.9].map(valueAt)).toEqual([0, 5, 5])
+    // and an editor opening it again shows what was typed
+    expect(shown.form).toEqual(step)
+  })
+
+  it('does the same for a pulse, pacing, a ramp and a trace, and shows each as written', () => {
+    const forms = [
+      { type: 'pulse', baseline: 1, level: 4, start: 0.5, end: 2 },
+      { type: 'pacing', baseline: 0, level: 1, start: 0, length: 0.1, period: 1, multiplier: 0 },
+    ]
+    for (const form of forms) {
+      const edited = setInputFromSubExperimentStart(document, { parameter: 'a/k', experiment: 0, sub: 0, shape: buildShapeFromForm(form, 4) })
+      expectValid(edited)
+      expect(read(edited, 0).shown.form).toEqual(form)
+      expect(read(edited, 0).early).toBe(false)
+    }
+    const ramp = setInputFromSubExperimentStart(document, { parameter: 'a/k', experiment: 0, sub: 0, shape: { type: 'ramp', from: 1, to: 3 } })
+    expect([0, 2, 4].map(read(ramp, 0).valueAt)).toEqual([1, 2, 3])
+    expect(read(ramp, 0).shown.trace).toEqual({ t: [0, 4], values: [1, 3] })
+    const trace = setInputFromSubExperimentStart(document, { parameter: 'a/k', experiment: 0, sub: 0, trace: { t: [0, 1, 2], values: [4, 6, 5] } })
+    expect(read(trace, 0).shown.trace).toEqual({ t: [0, 1, 2], values: [4, 6, 5] })
+  })
+
+  it('writes a later sub-experiment, or an experiment with no warm-up, as setInput does', () => {
+    const shape = buildShapeFromForm({ type: 'step', baseline: 0, level: 5, start: 1 }, 3)
+    const later = { parameter: 'a/k', experiment: 0, sub: 1, shape }
+    expect(setInputFromSubExperimentStart(document, later)).toEqual(setInput(document, later))
+    const cold = { protocol_info: { ...document.protocol_info, pre_times: [0] } }
+    const first = { parameter: 'a/k', experiment: 0, sub: 0, shape }
+    expect(setInputFromSubExperimentStart(cold, first)).toEqual(setInput(cold, first))
+  })
+})
+
+describe('readFromSubExperimentStart', () => {
+  it('reads an input that changes during the warm-up as it is, for the editor to say so', () => {
+    const { protocolInfo } = validateProtocolInfo({ pre_times: [2], sim_times: [[4]], params_to_change: { 'a/k': [['p']] }, protocol_shapes: { p: { events: [{ level: 5, start: 1, length: 2 }] } } })
+    const cell = readProtocolInfo(protocolInfo).controls[0].cells[0][0]
+    expect(readFromSubExperimentStart(cell, 2, 4)).toBe(cell)
+    // as does a constant, or an experiment with no warm-up
+    const constant = { kind: 'constant', value: 3 }
+    expect(readFromSubExperimentStart(constant, 2, 4)).toBe(constant)
+    expect(readFromSubExperimentStart(cell, 0, 4)).toBe(cell)
+  })
+})
+

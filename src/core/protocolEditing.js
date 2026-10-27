@@ -443,6 +443,24 @@ function keepStepsToTheEnd(info, experiment, sub, previous, duration) {
 }
 
 /**
+ * Sets a sub-experiment's input as setInput does, with its times from the start of the sub-experiment. CA starts an
+ * experiment's first sub-experiment, and its input's clock, with the warm-up; written there, the input is moved to start
+ * with the sub-experiment and holds its first value through the warm-up (alignWithWarmUp). Elsewhere, or with no
+ * warm-up, it is setInput.
+ *
+ * @param {Object} document
+ * @param {{parameter: string, experiment: number, sub: number, shape?: Object, trace?: Object}} change
+ * @returns {Object}
+ */
+export function setInputFromSubExperimentStart(document, change) {
+  const written = setInput(document, change)
+  const { parameter, experiment, sub, shape, trace } = change
+  if (sub !== 0 || !(written.protocol_info.pre_times[experiment] > 0)) return written
+  const name = written.protocol_info.params_to_change[parameter][experiment][0]
+  return alignWithWarmUp(written, { parameter, experiment, ...(shape ? { shape: normaliseShape(shape, name) } : { trace }) })
+}
+
+/**
  * Rewrites an input of an experiment's first sub-experiment so that it starts with the sub-experiment, not with the
  * warm-up as CA runs it, holding its first value through the warm-up. The file stays one CA reads the same way.
  *
