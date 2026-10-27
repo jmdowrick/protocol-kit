@@ -65,10 +65,13 @@
       />
     </p>
 
-    <p v-if="canAlign" class="align-note">
+    <p v-if="early" class="align-note">
       <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
-      Circulatory autogen starts this with the warm-up, so it runs {{ formatNumber(preTime) }} s earlier than written.
-      <Button label="Start it with the sub-experiment" link size="small" @click="emit('align')" />
+      This starts with the warm-up, {{ formatNumber(preTime) }} s before the sub-experiment. Applying writes the times
+      above from the start of the sub-experiment.
+    </p>
+    <p v-else-if="preTime > 0 && kind !== 'number'" class="subtle">
+      Times are from the start of the sub-experiment; the warm-up holds the starting value.
     </p>
 
     <div class="cell-actions">
@@ -137,13 +140,14 @@ const props = defineProps({
   traces: { type: Object, default: () => ({}) },
   units: { type: String, default: '' },
   colour: { type: String, default: 'currentColor' },
-  // The experiment's warm-up, when this input starts with it.
+  // The experiment's warm-up, for its first sub-experiment, whose times are written from after it.
   preTime: { type: Number, default: 0 },
-  canAlign: { type: Boolean, default: false },
+  // Whether the input, as the file has it, changes during the warm-up.
+  early: { type: Boolean, default: false },
   // The value the sub-experiment before ended on, when there is one, to carry on from.
   previousEnd: { type: Number, default: null },
 })
-const emit = defineEmits(['apply', 'align', 'cancel'])
+const emit = defineEmits(['apply', 'cancel'])
 
 const form = props.cell.form
 // A shape of several events has no simpler form, so it is pacing still.

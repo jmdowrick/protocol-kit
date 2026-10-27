@@ -2,6 +2,7 @@
  * Reads a protocol_info as experiments of sub-experiments, and the value each controlled parameter takes in each:
  * the view the run planner and the editor work from.
  */
+import { interpolateTrace } from './protocolPreview.js'
 import { PACING, RAMP, expandShape, findIntervals, isMapping, normaliseShape } from './protocolShapes.js'
 
 /**
@@ -149,3 +150,34 @@ export function changesDuringWarmUp(cell, preTime, duration) {
   const next = t.findIndex((time) => time > preTime)
   return early.some((value) => value !== early[0]) || (early.length > 0 && next >= 0 && next === early.length && t[next - 1] < preTime && values[next] !== early[0])
 }
+
+/**
+ * Reads an input of an experiment's first sub-experiment with its times from the start of the sub-experiment. CA starts
+ * that sub-experiment's clock with the warm-up, and an input the editor writes there holds its first value through the
+ * warm-up (setInputFromSubExperimentStart); this is the inverse, so an editor shows the times it was given. An input
+ * that changes during the warm-up, a constant, or one with no warm-up is read as it is.
+ *
+ * @param {Object} cell - From readProtocolInfo.
+ * @param {number} preTime - The experiment's warm-up.
+ * @param {number} duration - The sub-experiment's length.
+ * @returns {Object} A cell of the same kind.
+ */
+export function readFromSubExperimentStart(cell, preTime, duration) {
+  if (!(preTime > 0) || cell.kind === 'constant' || !cell.trace) return cell
+  try {
+    if (changesDuringWarmUp(cell, preTime, duration)) return cell
+  } catch {
+    return cell
+  }
+  const { t, values } = cell.trace
+  const later = t.map((time, i) => [time, values[i]]).filter(([time]) => time > preTime)
+  const trace = { t: [0, ...later.map(([time]) => time - preTime)], values: [interpolateTrace(cell.trace, preTime), ...later.map(([, value]) => value)] }
+  if (cell.kind !== 'shape' || cell.shape?.type !== PACING) return { ...cell, trace }
+  const shape = {
+    ...cell.shape,
+    events: cell.shape.events.map((event) => ({ ...event, start: event.start - preTime })),
+    ...(cell.shape.duration != null ? { duration: cell.shape.duration - preTime } : {}),
+  }
+  return { ...cell, shape, form: readShapeForm(shape, duration), trace }
+}
+

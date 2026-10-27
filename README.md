@@ -119,9 +119,9 @@ Every function takes and gives plain JSON-like values; edits never change the do
 | --- | --- | --- |
 | `obsDataDocument` | Reads and writes obs_data, and finds it among an archive's files as CUFLynx does. | `parseObsData`, `readObsDataParts`, `serialiseObsData`, `findObsDataExtra`, `buildObsDataLocation` |
 | `protocolValidation` | Checks `protocol_info` as CA does, with its messages, then for what running it needs. | `validateProtocolInfo`, `readAsCircAutogen`, `checkParamsToChange`, `PROTOCOL_INFO_KEYS` |
-| `protocolModel` | Reads a valid `protocol_info` as experiments of sub-experiments, and each parameter's input in each. | `readProtocolInfo`, `readShapeForm`, `buildShapeFromForm`, `nameExperiment`, `changesDuringWarmUp`, `findParametersAtModelValues` |
+| `protocolModel` | Reads a valid `protocol_info` as experiments of sub-experiments, and each parameter's input in each. | `readProtocolInfo`, `readShapeForm`, `buildShapeFromForm`, `nameExperiment`, `changesDuringWarmUp`, `readFromSubExperimentStart`, `findParametersAtModelValues` |
 | `protocolShapes` | Expands pacing and ramp shapes into traces, as CA's `protocol_shapes.py`. | `normaliseShape`, `expandShape`, `materialiseShapes`, `validateTraceReferences`, `ProtocolShapeError` |
-| `protocolEditing` | Edits a document's protocol, renumbering its data and prediction items. | `addExperiment`, `addEmptyExperiment`, `removeExperiment`, `moveExperiment`, `addSubExperiment`, `removeSubExperiment`, `setTiming`, `addParameter`, `removeParameter`, `setValue`, `setInput`, `alignWithWarmUp`, `findObservationsAt`, `ensureProtocol` |
+| `protocolEditing` | Edits a document's protocol, renumbering its data and prediction items. | `addExperiment`, `addEmptyExperiment`, `removeExperiment`, `moveExperiment`, `addSubExperiment`, `removeSubExperiment`, `setTiming`, `addParameter`, `removeParameter`, `setValue`, `setInput`, `setInputFromSubExperimentStart`, `alignWithWarmUp`, `findObservationsAt`, `ensureProtocol` |
 | `protocolPreview` | Samples an input over time for drawing. | `interpolateTrace`, `sampleInput`, `findValueRange`, `writePolylinePoints` |
 | `predictionItems` | Edits a document's prediction items one at a time, each read as a row and written back as CUFLynx's editor does. | `listPredictionItems`, `readPredictionItemRow`, `buildPredictionItem`, `createPredictionItem`, `addPredictionItem`, `updatePredictionItem`, `removePredictionItem`, `findFreeItemName`, `isValidationData` |
 | `operations` | Computes the operations a feature can take as CA's funcs do, to the bit, and the samples a range takes. | `applyOperation`, `sumPairwise`, `computeMean`, `sliceRange`, `sliceRangeBounds`, `COMPUTED_OPERATIONS`, `OperationError` |
@@ -334,6 +334,13 @@ every experiment and sub-experiment (within rounding, a relative 1e-9) has no la
 others counts them, with a button to show and hide them. The document keeps them. The model's values come from
 `getValue`, else `variables`; a parameter whose value is unknown there, one added or edited while the editor is open, and
 one an error or warning names (whole, not as the start of a longer name) are always shown.
+
+**Times in the first sub-experiment.** An input's times are from the start of its sub-experiment, the first one's
+too. CA starts an experiment's first sub-experiment, and its inputs' clock, with the warm-up, so an input written there
+is moved to start with the sub-experiment and holds its first value through the warm-up
+(`setInputFromSubExperimentStart`), and is shown again with the times it was given (`readFromSubExperimentStart`). An
+input a file has that changes during the warm-up is marked, and editing it writes the times shown from the start of the
+sub-experiment.
 
 **Data items.** `DataItemsSection` has CUFLynx's rows, `name | value | std | operation | exp | sub`, and under the
 chevron the operands (each labelled `x1`, `x2`... as CA's func names them, `time` among the variables), trace label,
