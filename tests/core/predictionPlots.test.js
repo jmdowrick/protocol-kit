@@ -4,7 +4,9 @@ import { computeFeatures } from '../../src/core/features.js'
 import { parseObsData, serialiseObsData } from '../../src/core/obsDataDocument.js'
 import { removePredictionItem, updatePredictionItem } from '../../src/core/predictionItems.js'
 import {
+  PREDICTION_PLOT_KINDS,
   addPredictionPlot,
+  buildPredictionPlot,
   computePlotSeries,
   findPlotsLosingInput,
   listFeatureGroups,
@@ -111,8 +113,8 @@ describe('validatePredictionPlots', () => {
   const errorsOf = (plots, change = {}) => validatePredictionPlots({ ...DOCUMENT, ...change, prediction_plots: plots }).plotErrors
 
   it('passes the worked example, and a file without plots', () => {
-    expect(validatePredictionPlots(DOCUMENT)).toEqual({ errors: [], plotErrors: [[], []] })
-    expect(validatePredictionPlots({ prediction_items: [] })).toEqual({ errors: [], plotErrors: [] })
+    expect(validatePredictionPlots(DOCUMENT)).toEqual({ errors: [], plotErrors: [[], []], plotWarnings: [[], []] })
+    expect(validatePredictionPlots({ prediction_items: [] })).toEqual({ errors: [], plotErrors: [], plotWarnings: [] })
   })
 
   it('checks the list, its entries, their keys, names and kinds', () => {
@@ -127,9 +129,9 @@ describe('validatePredictionPlots', () => {
       [],
       [
         "prediction_plots[2] ('a'): Its name is prediction_plots[1]'s too; each plot needs its own.",
-        "prediction_plots[2] ('a'): Its kind must be 'feature_vs_feature' or 'feature_vs_input', got 'curve'.",
+        "prediction_plots[2] ('a'): Its kind must be 'feature_vs_feature', 'feature_vs_input', 'input_and_output' or 'output_vs_input', got 'curve'.",
       ],
-      ["prediction_plots[3] ('b'): Its kind must be 'feature_vs_feature' or 'feature_vs_input', got 'feature_vs_experiment'."],
+      ["prediction_plots[3] ('b'): Its kind must be 'feature_vs_feature', 'feature_vs_input', 'input_and_output' or 'output_vs_input', got 'feature_vs_experiment'."],
     ])
   })
 
@@ -163,7 +165,7 @@ describe('validatePredictionPlots', () => {
       ],
       [
         "prediction_plots[3] ('d'): y names 'I_peak', which has 2 items in experiment_idx 2 (I_peak_e2, again); a plot takes one per experiment.",
-        "prediction_plots[3] ('d'): x must be {'params_to_change': <key>, 'subexperiment_idx': <int>}, got 'V_step'.",
+        "prediction_plots[3] ('d'): x must be {'params_to_change': <key>, 'subexperiment_idx': <int>[, 'reduce': <how>]}, got 'V_step'.",
       ],
     ])
     expect(errorsOf([{ name: 'a', kind: 'feature_vs_feature', x: 'V_step', y: 'I_peak' }], { prediction_items: DOCUMENT.prediction_items.slice(0, 5) })).toEqual([
@@ -171,7 +173,7 @@ describe('validatePredictionPlots', () => {
     ])
   })
 
-  it('checks that an input is set, to a number, in that sub-experiment of each experiment', () => {
+  it('checks that an input is set, to a number or a trace, in that sub-experiment of each experiment', () => {
     const info = structuredClone(DOCUMENT.protocol_info)
     info.sim_times[2] = [50]
     info.params_to_change['clamp/V_cmd'][1][1] = 'step_e1'
@@ -187,14 +189,11 @@ describe('validatePredictionPlots', () => {
         { protocol_info: info }
       )
     ).toEqual([
-      [
-        "prediction_plots[0] ('a'): x reads 'clamp/V_cmd' in experiment_idx 1, sub-experiment 1, which is 'step_e1': a shape or trace, not a number.",
-        "prediction_plots[0] ('a'): x's subexperiment_idx 1 is not a sub-experiment of experiment_idx 2, which has 1.",
-      ],
+      ["prediction_plots[0] ('a'): x's subexperiment_idx 1 is not a sub-experiment of experiment_idx 2, which has 1."],
       ["prediction_plots[1] ('b'): x names the input 'clamp/V_hold', which protocol_info's params_to_change doesn't set."],
-      ["prediction_plots[2] ('c'): x must be {'params_to_change': <key>, 'subexperiment_idx': <int>}, got 'V_step'."],
+      ["prediction_plots[2] ('c'): x must be {'params_to_change': <key>, 'subexperiment_idx': <int>[, 'reduce': <how>]}, got 'V_step'."],
       [
-        "prediction_plots[3] ('d'): x has keys it doesn't take: ['at']. It is {'params_to_change': <key>, 'subexperiment_idx': <int>}.",
+        "prediction_plots[3] ('d'): x has keys it doesn't take: ['at']. It is {'params_to_change': <key>, 'subexperiment_idx': <int>[, 'reduce': <how>]}.",
         "prediction_plots[3] ('d'): series's subexperiment_idx must be an integer, got 1.5.",
       ],
     ])
@@ -276,3 +275,166 @@ describe('computePlotSeries', () => {
     expect(bad).toMatchObject({ points: [], errors: ["prediction_plots[1] ('bad'): x names no prediction items: none has the item_name_for_plotting 'none'."] })
   })
 })
+
+describe('the kinds CA #591 draws', () => {
+  const OUTPUT = { name: 'V over time', kind: 'input_and_output', input: { params_to_change: 'clamp/V_cmd' }, output: 'membrane/V', experiments: [0, 2] }
+  const withPlots = (plots, change = {}) => ({ ...DOCUMENT, ...change, prediction_plots: plots })
+  const errorsOf = (plots, change) => validatePredictionPlots(withPlots(plots, change)).plotErrors
+
+  it('offers the four kinds', () => {
+    expect(PREDICTION_PLOT_KINDS.map(({ value }) => value)).toEqual(['feature_vs_feature', 'feature_vs_input', 'input_and_output', 'output_vs_input'])
+  })
+
+  it("writes each kind's keys alone, experiments left out for all", () => {
+    expect(buildPredictionPlot({ ...OUTPUT, x: 'V_step', y: 'I_peak' })).toEqual(OUTPUT)
+    expect(buildPredictionPlot({ name: 'a', kind: 'output_vs_input', input: { params_to_change: 'clamp/V_cmd' }, output: 'membrane/V' })).toEqual({
+      name: 'a',
+      kind: 'output_vs_input',
+      input: { params_to_change: 'clamp/V_cmd' },
+      output: 'membrane/V',
+    })
+    expect(buildPredictionPlot({ name: 'a', kind: 'feature_vs_input', x: STEP(), y: 'I_peak', input: { params_to_change: 'clamp/V_cmd' }, output: 'membrane/V' })).toEqual({
+      name: 'a',
+      kind: 'feature_vs_input',
+      x: STEP(),
+      y: 'I_peak',
+      series: null,
+    })
+  })
+
+  it("drops the old kind's keys on a change of kind, keeping the name and keys no kind takes", () => {
+    const document = withPlots([{ ...DOCUMENT.prediction_plots[1], note: 'kept' }])
+    const toOutput = updatePredictionPlot(document, 0, { kind: 'input_and_output', input: { params_to_change: 'clamp/V_cmd' }, output: 'membrane/V' })
+    expect(toOutput.prediction_plots[0]).toEqual({ name: 'Peak I_Na vs command', kind: 'input_and_output', note: 'kept', input: { params_to_change: 'clamp/V_cmd' }, output: 'membrane/V' })
+    // input_and_output and output_vs_input share their keys.
+    const toAgainst = updatePredictionPlot(updatePredictionPlot(toOutput, 0, { experiments: [1] }), 0, { kind: 'output_vs_input' })
+    expect(toAgainst.prediction_plots[0]).toEqual({ ...toOutput.prediction_plots[0], kind: 'output_vs_input', experiments: [1] })
+    expect(updatePredictionPlot(toAgainst, 0, { experiments: null }).prediction_plots[0]).not.toHaveProperty('experiments')
+    const back = updatePredictionPlot(toAgainst, 0, { kind: 'feature_vs_feature', x: 'V_step', y: 'I_peak' })
+    expect(back.prediction_plots[0]).toEqual({ name: 'Peak I_Na vs command', kind: 'feature_vs_feature', note: 'kept', x: 'V_step', y: 'I_peak', series: null })
+  })
+
+  it('checks an input_and_output or output_vs_input plot: its input, output and experiments, and no keys of the other kinds', () => {
+    expect(errorsOf([OUTPUT, { ...OUTPUT, name: 'all', kind: 'output_vs_input', experiments: undefined }].map((plot) => JSON.parse(JSON.stringify(plot))))).toEqual([[], []])
+    expect(
+      errorsOf([
+        { name: 'a', kind: 'input_and_output', output: '' },
+        { name: 'b', kind: 'output_vs_input', input: STEP(), output: 'membrane/V', experiments: [] },
+        { name: 'c', kind: 'input_and_output', input: { params_to_change: 'clamp/V_hold' }, output: 'membrane/V', experiments: [0, 3, 0] },
+        { name: 'd', kind: 'output_vs_input', input: { params_to_change: 'clamp/V_cmd' }, output: 'membrane/V', y: 'I_peak', series: null },
+        { name: 'e', kind: 'input_and_output', input: { params_to_change: 3 }, output: 7, experiments: [0.5] },
+      ])
+    ).toEqual([
+      ["prediction_plots[0] ('a'): input must be {'params_to_change': <key>}, got None.", "prediction_plots[0] ('a'): output must name a model output, got ''."],
+      [
+        "prediction_plots[1] ('b'): input has keys it doesn't take: ['subexperiment_idx']. It is {'params_to_change': <key>}.",
+        "prediction_plots[1] ('b'): experiments must be a list of experiment_idx, at least one, or left out for all, got [].",
+      ],
+      [
+        "prediction_plots[2] ('c'): input names 'clamp/V_hold', which protocol_info's params_to_change doesn't set.",
+        "prediction_plots[2] ('c'): experiments names [3], which protocol_info doesn't have: it has 3.",
+        "prediction_plots[2] ('c'): experiments names an experiment more than once: [0, 3, 0].",
+      ],
+      ["prediction_plots[3] ('d'): A output_vs_input plot doesn't take ['series', 'y']: it takes ['name', 'kind', 'input', 'output', 'experiments']."],
+      [
+        "prediction_plots[4] ('e'): input's params_to_change must name an input, got 3.",
+        "prediction_plots[4] ('e'): output must name a model output, got 7.",
+        "prediction_plots[4] ('e'): experiments must be a list of experiment_idx, at least one, or left out for all, got [0.5].",
+      ],
+    ])
+    expect(errorsOf([{ name: 'f', kind: 'feature_vs_input', x: STEP(), y: 'I_peak', output: 'membrane/V' }])).toEqual([
+      ["prediction_plots[0] ('f'): A feature_vs_input plot doesn't take ['output']: it takes ['name', 'kind', 'x', 'y', 'series']."],
+    ])
+  })
+
+  it("checks an input reference's reduce: final, mean, max, min or {at: <seconds>}", () => {
+    const plot = (reduce, name = 'a') => ({ name, kind: 'feature_vs_input', x: { ...STEP(), reduce }, y: 'I_peak', series: null })
+    expect(errorsOf([...INPUT_REDUCTIONS_OF(plot), plot({ at: 0 }, 'at0'), plot({ at: 12.5 }, 'at')])).toEqual([[], [], [], [], [], []])
+    expect(errorsOf([plot('median'), plot({ at: -1 }, 'b'), plot({ at: '1' }, 'c'), plot({ when: 1 }, 'd'), { ...plot('final', 'e'), series: { ...STEP(), reduce: null } }])).toEqual([
+      ["prediction_plots[0] ('a'): x's reduce must be 'final', 'mean', 'max', 'min' or {'at': <seconds>}, got 'median'."],
+      ["prediction_plots[1] ('b'): x's reduce at must be a number of seconds from the start of the sub-experiment, 0 or more, got -1."],
+      ["prediction_plots[2] ('c'): x's reduce at must be a number of seconds from the start of the sub-experiment, 0 or more, got '1'."],
+      ["prediction_plots[3] ('d'): x's reduce has keys it doesn't take: ['when']. It is {'at': <seconds>}."],
+      ["prediction_plots[4] ('e'): series's reduce must be 'final', 'mean', 'max', 'min' or {'at': <seconds>}, got None."],
+    ])
+  })
+
+  it('takes an input that is a trace, warning that CA leaves out its points without a reduce', () => {
+    const info = structuredClone(DOCUMENT.protocol_info)
+    info.params_to_change['clamp/V_cmd'][1][1] = 'step_e1'
+    info.protocol_traces = { step_e1: { t: [0, 50], values: [-20, -20] } }
+    const unreduced = { name: 'a', kind: 'feature_vs_input', x: STEP(), y: 'I_peak', series: null }
+    const reduced = { ...unreduced, name: 'b', x: { ...STEP(), reduce: { at: 10 } } }
+    const document = withPlots([unreduced, reduced], { protocol_info: info })
+    expect(validatePredictionPlots(document)).toEqual({
+      errors: [],
+      plotErrors: [[], []],
+      plotWarnings: [["prediction_plots[0] ('a'): x reads 'clamp/V_cmd' as a trace in experiment_idx [1], and has no reduce to make it one number: CA leaves out those points."], []],
+    })
+    const [byUnreduced, byReduced] = computePlotSeries(document, computeFeatures(document, SEGMENTS))
+    expect(byUnreduced.points.map(({ experiment }) => experiment)).toEqual([0, 2])
+    expect(byUnreduced.skipped).toEqual([{ experiment: 1, reason: "clamp/V_cmd is the trace 'step_e1' in sub-experiment 2, with no reduce to make it one number." }])
+    expect(byReduced.x.label).toBe('clamp/V_cmd (sub-experiment 2, at 10 s)')
+    expect(byReduced.skipped).toEqual([{ experiment: 1, reason: "clamp/V_cmd is the trace 'step_e1' in sub-experiment 2: CA reduces it (at 10 s) when it draws, and protocol-kit doesn't." }])
+    // A number ignores reduce.
+    expect(computePlotSeries(withPlots([reduced]), computeFeatures(DOCUMENT, SEGMENTS))[0].points.map(({ x }) => x)).toEqual([-40, -20, 0])
+  })
+
+  it("refuses a reduce at past the end of a sub-experiment where the input is a trace, as CA does, for x and series", () => {
+    const info = structuredClone(DOCUMENT.protocol_info)
+    info.params_to_change['clamp/V_cmd'][1][1] = 'step_e1'
+    info.protocol_traces = { step_e1: { t: [0, 50], values: [-20, -20] } }
+    const plot = (name, x, series = null) => ({ name, kind: 'feature_vs_input', x, y: 'I_peak', series })
+    const document = withPlots(
+      [
+        plot('end', { ...STEP(), reduce: { at: 50 } }),
+        plot('after', { ...STEP(), reduce: { at: 60.5 } }),
+        plot('series', STEP(), { ...STEP(), reduce: { at: 51 } }),
+        // A number ignores reduce, so its at is never checked.
+        plot('number', { ...STEP(0), reduce: { at: 60 } }),
+      ],
+      { protocol_info: info }
+    )
+    expect(validatePredictionPlots(document).plotErrors).toEqual([
+      [],
+      ["prediction_plots[1] ('after'): x's reduce at 60.5 s is after the end of sub-experiment 1 of experiment_idx 1, which is 50 s long."],
+      ["prediction_plots[2] ('series'): series's reduce at 51 s is after the end of sub-experiment 1 of experiment_idx 1, which is 50 s long."],
+      [],
+    ])
+  })
+
+  it('gives an input_and_output or output_vs_input plot no points, but its input, output and experiments', () => {
+    const { experiments: _, ...all } = OUTPUT
+    const [named, everyExperiment] = computePlotSeries(withPlots([OUTPUT, { ...all, name: 'all', kind: 'output_vs_input' }]), [])
+    expect(named).toMatchObject({ kind: 'input_and_output', input: { label: 'clamp/V_cmd' }, output: { label: 'membrane/V' }, experiments: [0, 2], points: [], errors: [] })
+    expect(everyExperiment.experiments).toEqual([0, 1, 2])
+  })
+
+  it('renumbers the experiments a plot names as experiments move and go, removing one left with none', () => {
+    const document = withPlots([OUTPUT, { ...OUTPUT, name: 'one', experiments: [1] }, { ...OUTPUT, name: 'all', experiments: undefined }].map((plot) => JSON.parse(JSON.stringify(plot))))
+    const removed = removeExperiment(document, 1)
+    expect(removed.prediction_plots.map(({ name, experiments }) => [name, experiments])).toEqual([
+      ['V over time', [0, 1]],
+      ['all', undefined],
+    ])
+    expect(moveExperiment(document, 0, 2).prediction_plots.map(({ experiments }) => experiments)).toEqual([[2, 1], [0], undefined])
+    expect(validatePredictionPlots(removed).errors).toEqual([])
+  })
+
+  it('round-trips a file with every kind, byte for byte, and through edits that leave them', () => {
+    const plots = [
+      ...DOCUMENT.prediction_plots,
+      { name: 'Peak I_Na vs final command', kind: 'feature_vs_input', x: { ...STEP(), reduce: 'final' }, y: 'I_peak', series: { ...STEP(0), reduce: { at: 2.5 } } },
+      OUTPUT,
+      { name: 'V vs command', kind: 'output_vs_input', input: { params_to_change: 'clamp/V_cmd' }, output: 'membrane/V' },
+    ]
+    const text = `${JSON.stringify(withPlots(plots), null, 2)}\n`
+    const { document } = parseObsData(text)
+    expect(validatePredictionPlots(document).errors).toEqual([])
+    expect(new TextDecoder().decode(serialiseObsData(document))).toBe(text)
+    for (const [index, plot] of plots.entries()) expect(updatePredictionPlot(document, index, { name: plot.name })).toEqual(document)
+    expect(moveExperiment(moveExperiment(document, 0, 2), 2, 0)).toEqual(document)
+  })
+})
+
+const INPUT_REDUCTIONS_OF = (plot) => ['final', 'mean', 'max', 'min'].map((reduce) => plot(reduce, reduce))

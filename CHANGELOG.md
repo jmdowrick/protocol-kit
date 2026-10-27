@@ -8,6 +8,24 @@
   (`alignWithWarmUp`). `readFromSubExperimentStart` reads such an input back with the times it was given, for the
   segment editor. The segment editor's "Start it with the sub-experiment" button and its `canAlign` prop and `align`
   event are gone; it takes `early` for an input the file has that changes during the warm-up, which it marks.
+- Prediction plots take the kinds and options circulatory_autogen #591 draws. `input_and_output` draws an input and a
+  model output over time on twin y axes, a figure per experiment; `output_vs_input` draws the output against the
+  input's value, a line per experiment. Both are `{name, kind, input: {params_to_change}, output, experiments}`,
+  `experiments` left out for all. A `feature_vs_input` plot's x and series take an optional `reduce`, how a trace
+  becomes one number: `'final'`, `'mean'`, `'max'`, `'min'` or `{at: <seconds from the start of the sub-experiment>}`;
+  a number ignores it, and an `at` after the end of a sub-experiment where the input is a trace is an error, as in CA.
+  An input that is a trace is now valid there: without a reduce, CA leaves out its points, which
+  `validatePredictionPlots` gives as `plotWarnings` and `computePlotSeries` as skipped. `computePlotSeries` gives the
+  new kinds no points, but their `input`, `output` and `experiments` (`listPlotExperiments`), for a host to draw from
+  its traces. Each kind is checked for its own keys and no others (`PREDICTION_PLOT_KIND_KEYS`), and
+  `updatePredictionPlot` drops the old kind's keys when a plot changes kind, keeping its name and keys no kind takes.
+  Removing or moving an experiment renumbers the experiments a plot names, and removes one left with none.
+- `PredictionPlotsSection` has a row per plot, `name | kind | settings`: the kind a dropdown of the four, and only the
+  chosen kind's settings. `feature_vs_feature`: y, x and series. `feature_vs_input`: y, x as an input, its
+  sub-experiment and a reduce (a time for "at a time"), and series, with its own reduce (the same control as
+  x's), kept as the series' input or sub-experiment changes. `input_and_output` and `output_vs_input`: the input,
+  the output (picked from the host's `variables`, which `ObsDataEditor` passes on, else typed) and a box per
+  experiment, all ticked leaving `experiments` out. A plot's warnings show under it, in orange.
 
 ## 0.5.0 (unreleased)
 

@@ -46,7 +46,7 @@
         @select="(index) => select('prediction', index)"
         @update:document="emitDocument"
       />
-      <PredictionPlotsSection :document="document" @update:document="emitDocument" />
+      <PredictionPlotsSection :document="document" :variables="variables" @update:document="emitDocument" />
     </template>
   </section>
 </template>

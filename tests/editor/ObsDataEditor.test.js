@@ -110,6 +110,11 @@ describe('ObsDataEditor', () => {
     expect(lastDocument().data_items).toEqual([])
   })
 
+  it("gives the prediction plots the host's variables, to pick an output from", () => {
+    mountEditor(readFixture('prediction_items_536_obs_data.json'))
+    expect(wrapper.findComponent(PredictionPlotsSection).props('variables')).toEqual(VARIABLES)
+  })
+
   it("gives PhLynx's preset its data items read-only, and hides them for the host's setting", async () => {
     mountEditor(readFixture('prediction_items_536_obs_data.json'), { preset: 'phlynx' })
     const items = wrapper.findComponent(DataItemsSection)

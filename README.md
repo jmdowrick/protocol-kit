@@ -52,9 +52,10 @@ It follows circulatory_autogen's semantics for `obs_data.json`, so a file means 
   distribution (`prob_dist_params`), of the variables in `operands` or a feature of them (`operation`), scored by a
   cost (`cost_type`, by default `gaussian_MLE`) with a `weight`. Edits keep its keys as written, but write the legacy
   `variable` and `name_for_plotting` as `data_item_name` and `trace_name_for_plotting`.
-- A prediction plot (`prediction_plots`, a top-level list as proposed to circulatory_autogen; CA ignores it) pairs two
-  groups of features experiment by experiment, by `experiment_idx`, or a group with an input's value in a
-  sub-experiment of each. Edits keep it pointing at the same groups and sub-experiments.
+- A prediction plot (`prediction_plots`, a top-level list circulatory_autogen draws) pairs two groups of features
+  experiment by experiment, by `experiment_idx`, or a group with an input's value in a sub-experiment of each; or draws
+  a model output with an input, over time or against it, in each experiment. Edits keep it pointing at the same groups,
+  sub-experiments and experiments.
 - Keys it doesn't know are kept, wherever they are.
 
 ## Getting started (contributors)
@@ -125,7 +126,7 @@ Every function takes and gives plain JSON-like values; edits never change the do
 | `predictionItems` | Edits a document's prediction items one at a time, each read as a row and written back as CUFLynx's editor does. | `listPredictionItems`, `readPredictionItemRow`, `buildPredictionItem`, `createPredictionItem`, `addPredictionItem`, `updatePredictionItem`, `removePredictionItem`, `findFreeItemName`, `isValidationData` |
 | `operations` | Computes the operations a feature can take as CA's funcs do, to the bit, and the samples a range takes. | `applyOperation`, `sumPairwise`, `computeMean`, `sliceRange`, `sliceRangeBounds`, `COMPUTED_OPERATIONS`, `OperationError` |
 | `features` | Computes a run's features from each sub-experiment's samples: its prediction items' as CA's features_from_segments does, its data items' as its cost loop does. | `computeFeatures`, `computeDataItemFeatures` |
-| `predictionPlots` | Edits and checks a document's prediction plots, and pairs features into their points. | `addPredictionPlot`, `updatePredictionPlot`, `removePredictionPlot`, `validatePredictionPlots`, `listFeatureGroups`, `computePlotSeries`, `findPlotsLosingInput`, `PREDICTION_PLOT_KINDS` |
+| `predictionPlots` | Edits and checks a document's prediction plots, and pairs features into their points. | `addPredictionPlot`, `updatePredictionPlot`, `removePredictionPlot`, `validatePredictionPlots`, `listFeatureGroups`, `computePlotSeries`, `listPlotExperiments`, `findPlotsLosingInput`, `PREDICTION_PLOT_KINDS`, `PREDICTION_PLOT_KIND_KEYS`, `INPUT_REDUCTIONS` |
 | `predictionValidation` | Checks prediction items as CA #536 does, with its messages, then each range for the run's `dt`. | `readPredictionItemsAsCircAutogen`, `validatePredictionItems`, `checkOperationRange`, `findPredictionItemLimits`, `readPredictionItem`, `nameItemForPlotting`, `PREDICTION_ITEM_KEYS` |
 | `dataItems` | Edits a document's data items, each read as a form's row and written back as CUFLynx's editor did. | `listDataItems`, `isRowDataItem`, `addDataItem`, `updateDataItem`, `removeDataItem`, `readDataItem`, `buildDataItem`, `createDataItem`, `DATA_ITEM_FIELDS` |
 | `dataItemValidation` | Checks data items as CA #536 reads them, with its messages, then each for an editor: kwargs, references, experiments. | `readDataItemsAsCircAutogen`, `validateDataItems`, `checkOperationKwargs`, `checkCostKwargs`, `checkDataItemReferences`, `DATA_ITEM_KEYS` |
@@ -227,11 +228,18 @@ const { start, end } = sliceRangeBounds(samples.length, measured[0].kwargs) // t
 const edited = addPredictionPlot(document, {
   name: 'Peak I_Na vs step potential',
   kind: 'feature_vs_input', // or 'feature_vs_feature' (x a group)
-  x: { params_to_change: 'clamp/V_cmd', subexperiment_idx: 1 },
+  x: { params_to_change: 'clamp/V_cmd', subexperiment_idx: 1, reduce: 'max' }, // reduce: for an input that is a trace
   y: 'I_peak', // a group: the items' item_name_for_plotting
   series: null, // or an input like x: a line per value
 })
-const { errors, plotErrors } = validatePredictionPlots(edited)
+const traced = addPredictionPlot(edited, {
+  name: 'V with the command',
+  kind: 'input_and_output', // or 'output_vs_input': the output against the input
+  input: { params_to_change: 'clamp/V_cmd' },
+  output: 'membrane/V',
+  experiments: [0, 2], // left out for all
+})
+const { errors, plotErrors, plotWarnings } = validatePredictionPlots(traced)
 const [plot] = computePlotSeries(edited, features) // { x, y, series, points: [{ experiment, x, y, series, measured }], skipped, errors }
 ```
 
@@ -252,11 +260,19 @@ sub-experiment or, as `*_in_range`, over its `start_frac` to `end_frac`, and `fi
 in the sub-experiment's own time, or its last time when there is none. A host draws it as a vertical line.
 
 A plot pairs, for each experiment its `y` group has an item in, that item's feature with the `x` group's in the same
-experiment (`feature_vs_feature`), or the number `params_to_change[key][experiment][subexperiment_idx]`
-(`feature_vs_input`): the proposal's two kinds, and no others.
-`validatePredictionPlots` checks what the proposal does: keys, a name of its own, the kind and its `x`, groups that
-exist, are features (an operation, not a series) and have one item per experiment, `x` and `y` over the same
-experiments, and inputs set to a number in that sub-experiment of each experiment. Removing a sub-experiment moves an
+experiment (`feature_vs_feature`), or the value `params_to_change[key][experiment][subexperiment_idx]`
+(`feature_vs_input`). Where that is a trace, `reduce` makes it one number, as CA #591 does: `'final'`, `'mean'`,
+`'max'`, `'min'` or `{at: <seconds from the start of the sub-experiment>}`; a number ignores it, and CA leaves out the
+point of a trace without one. `input_and_output` and `output_vs_input` draw a model output (`output`) with an input
+(`input: {params_to_change}`), over time on twin y axes or against it, in each experiment of `experiments`, all when
+it is left out; `computePlotSeries` gives them no points, as they draw a run's traces, but their input, output and
+experiments. `validatePredictionPlots` checks what CA does: each kind's keys and no others, a name of its own, the
+kind, and for the feature kinds the `x` it takes, groups that exist, are features (an operation, not a series) and
+have one item per experiment, `x` and `y` over the same experiments, and inputs set to a number or a trace in that
+sub-experiment of each experiment, with a reduce CA knows (its `at` no later than the end of a sub-experiment
+where the input is a trace); for the others, an input `params_to_change` sets, an output
+and experiments the protocol has. `plotWarnings` names a trace read without a reduce. Removing or moving an experiment
+renumbers the `experiments` a plot names; one left with none goes. Removing a sub-experiment moves an
 input reference down with it where every point is in that experiment; where one index can no longer name the same
 sub-experiment in each, or names the one removed, the plot goes, and `findObservationsAt` names it first.
 
@@ -347,9 +363,12 @@ name, item label (`item_name_for_plotting`, CA's default as its placeholder) and
 `end_frac` for a range. A variable picked names an item left unnamed, and gives its unit. An item with held-out data is
 marked `obs`, its data kept. Each row shows CA's errors for it; the section warns what needs #536.
 
-**Prediction plots.** `PredictionPlotsSection` has a row per plot, `name | kind | y | x | series`: y and, for
-`feature_vs_feature`, x a group of features; for `feature_vs_input` x an input in a sub-experiment; series none or an
-input. Each row shows the plot's errors.
+**Prediction plots.** `PredictionPlotsSection` has a row per plot, `name | kind | settings`: the kind a dropdown of the
+four, and only that kind's settings. `feature_vs_feature`: y and x groups of features, and series none or an input in a
+sub-experiment. `feature_vs_input`: y, x an input with its sub-experiment and reduce (and a time for "at a time"), and
+series. `input_and_output` and `output_vs_input`: the input, the output (picked from `variables` when the host gives
+them, else typed) and a box per experiment, every one ticked leaving `experiments` out. Choosing a kind writes its keys
+alone, keeping the name and carrying an input over. Each row shows the plot's errors, and its warnings.
 
 Each section takes `document`, `readOnly` and, but for the plots, `columns` (a preset or a list of keys); it emits
 `update:document`, and the item sections `select` with the place of the row selected (`selected`). The entry also
